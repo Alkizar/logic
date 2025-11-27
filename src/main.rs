@@ -1,8 +1,10 @@
 mod structures;
 mod parser;
+mod truth_table;
 
 use structures::*;
 use parser::*;
+use truth_table::*;
 use std::collections::HashMap;
 
 fn main() {

@@ -105,3 +105,4 @@ fn next_equiv(string: &str, mut toks: Vec<Token>, prev: char) -> Option<Vec<Toke
 	}
 }
 
+// TODO: LL(1) parser (can we get away with top-down? if not, do we need LR(1)?)
