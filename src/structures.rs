@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
 pub struct Variable {
 	pub name: String
 }
@@ -64,6 +64,31 @@ pub enum Formula<'a> {
 	Xor		(&'a Formula<'a>, &'a Formula<'a>),
 }
 
+// TODO
+pub enum Formula2 {
+	Var 	(Variable),
+	Not		(Box<Formula2>),
+	And		(Box<Formula2>, Box<Formula2>),
+	Or 		(Box<Formula2>, Box<Formula2>),
+	Implies	(Box<Formula2>, Box<Formula2>),
+	Equiv	(Box<Formula2>, Box<Formula2>),
+	Xor		(Box<Formula2>, Box<Formula2>),
+}
+
+impl fmt::Display for Formula2 {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Formula2::Var(x) 		=> write!(f, "{}", x),
+			Formula2::Not(y) 		=> write!(f, "~({})", y),
+			Formula2::And(y, z) 		=> write!(f, "({}) & ({})", y, z),
+			Formula2::Or(y, z) 		=> write!(f, "({}) | ({})", y, z),
+			Formula2::Implies(y, z) 	=> write!(f, "({}) => ({})", y, z),
+			Formula2::Equiv(y, z) 	=> write!(f, "({}) <=> ({})", y, z),
+			Formula2::Xor(y, z) 		=> write!(f, "({}) + ({})", y, z),
+		}
+	}
+}
+
 impl Formula<'_> {
 	pub fn interpret(&self, v: &Model) -> Option<bool> {
 		match self { 
@@ -74,6 +99,20 @@ impl Formula<'_> {
 			Formula::Implies(y, z) 	=> implies(y.interpret(v), z.interpret(v)),
 			Formula::Equiv(y, z) 	=> equiv(y.interpret(v), z.interpret(v)),
 			Formula::Xor(y, z) 		=> xor(y.interpret(v), z.interpret(v)),
+		}
+	}
+}
+
+impl fmt::Display for Formula<'_> {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Formula::Var(x) 		=> write!(f, "{}", x),
+			Formula::Not(y) 		=> write!(f, "~({})", y),
+			Formula::And(y, z) 		=> write!(f, "({}) & ({})", y, z),
+			Formula::Or(y, z) 		=> write!(f, "({}) | ({})", y, z),
+			Formula::Implies(y, z) 	=> write!(f, "({}) => ({})", y, z),
+			Formula::Equiv(y, z) 	=> write!(f, "({}) <=> ({})", y, z),
+			Formula::Xor(y, z) 		=> write!(f, "({}) + ({})", y, z),
 		}
 	}
 }

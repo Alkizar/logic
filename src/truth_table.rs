@@ -1,24 +1,71 @@
 use structures::*;
 use std::collections::HashSet;
+use std::collections::HashMap;
+//use std::vec;
 
 fn extract_variables<'a>(p: &'a Formula) -> HashSet<&'a Variable> {
-	let mut vars: HashSet<&Variable> = HashSet::new();
-	extract_variables_rec(p, &vars);
+	let mut vars: HashSet<&'a Variable> = HashSet::new();
+	extract_variables_rec(p, &mut vars);
 	vars
 }
 
-fn extract_variables_rec<'a>(p: &Formula, mut vars: &'a HashSet<&Variable>) -> &'a HashSet<&Variable> {
+fn extract_variables_rec<'a, 'b>(p: &'a Formula, vars: &'b mut HashSet<&'a Variable>) {
 	match p {
-		Formula::Var(x) => vars.insert(&x),
-		Formula::Not(q) => vars.extend(extract_variables(q, vars)),
-		Formula::And(q, r) => { vars.extend(extract_variables(q, vars)); vars.extend(extract_variables(r, vars)) },
-		Formula::Or(q, r) => { vars.extend(extract_variables(q, vars)); vars.extend(extract_variables(r, vars)) },
-		Formula::Implies(q, r) => { vars.extend(extract_variables(q, vars)); vars.extend(extract_variables(r, vars)) },
-		Formula::Equiv(q, r) => { vars.extend(extract_variables(q, vars)); vars.extend(extract_variables(r, vars)) },
-		Formula::Xor(q, r) => { vars.extend(extract_variables(q, vars)); vars.extend(extract_variables(r, vars)) },
+		Formula::Var(x) 		=> { vars.insert(&x); },
+		Formula::Not(q) 		=> { extract_variables_rec(q, vars); },
+		Formula::And(q, r) 		=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
+		Formula::Or(q, r) 		=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
+		Formula::Implies(q, r) 	=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
+		Formula::Equiv(q, r) 	=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
+		Formula::Xor(q, r) 		=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
 	}
 }
 
-/*fn find_truth_tables(p: &Formula) -> HashSet<Model<'a>> {
-	// TODO
-}*/
+pub fn find_truth_table<'a>(p: &'a Formula<'a>) -> Vec<Model<'a>> {
+	let mut vars: Vec<&'_ Variable> = extract_variables(p).into_iter().collect();
+	vars.sort();
+	let n = vars.len();
+	let mut models: Vec<Model<'a>> = Vec::new();
+	
+	for i in 0..(1 << n) {
+		let mut model: Model<'a> = HashMap::new();
+		for (index, var) in vars.iter().enumerate() {
+			if (i & (1 << index)) != 0 {
+				model.insert(var, true);
+			} else {
+				model.insert(var, false);
+			}
+		}
+		models.push(model);
+	}
+	models
+}
+
+pub fn display_truth_table<'a>(p: &'a Formula<'a>) { // TODO -- add support for multiple formulae
+	let mut vars: Vec<&'_ Variable> = extract_variables(p).into_iter().collect();
+	vars.sort();
+	for var in vars.iter() {
+		print!("{} | ", var);
+	}
+	print!("{}\n", p);
+
+	for var in vars.iter() {
+		print!("-{}+-", "-".repeat(var.name.to_string().len()));
+	}
+
+	print!("{}\n", "-".repeat(p.to_string().len()));
+
+	let models: Vec<Model<'_>> = find_truth_table(p);
+	for model in models.iter() {
+		for var in vars.iter() {
+			match model.get(var) {
+				Some(t) => { if *t { print!("1{}| ", " ".repeat(var.name.to_string().len())) } else { print!("0{}| ", " ".repeat(var.name.to_string().len())) } },
+				None 	=> print!("<DISPLAY ERROR>\n"),
+			}
+		}
+		match p.interpret(model) {
+			Some(t) => { if t { print!("1\n") } else { print!("0\n") } },
+			None 	=> print!("<DISPLAY ERROR>\n"),
+		}
+	}
+}
