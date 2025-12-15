@@ -1,13 +1,10 @@
-//use std::vec;
 use std::fmt;
 use std::collections::HashMap;
 use structures::*;
 
-// TODO -- revoke pub
 #[derive(PartialEq, Eq)]
-pub enum Token {
-	Var(String), // TODO -- need to resolve variables into symbol table so that all variables with the same name map to a single object
-				 // (lexing should also create a map from variable names to variable objects; before emitting a variable, check if it's already present in the map)
+enum Token {
+	Var(String),
 	Not,
 	And,
 	Or,
@@ -110,9 +107,6 @@ fn next_equiv(string: &str, mut toks: Vec<Token>, prev: char) -> Option<Vec<Toke
 	}
 }
 
-// TODO: LL(1) parser (can we get away with top-down? if not, do we need LR(1)?)
-
-// TODO -- convert to a formula by traversing; build sym table along the way
 struct AST {
 	node: Token,
 	children: Vec<AST>,
@@ -130,16 +124,16 @@ impl AST {
 		self.children.push(child);
 	}
 
-	fn to_formula<'a>(&self) -> Option<Formula2> { 
+	fn to_formula<'a>(&self) -> Option<Formula> { 
 		match &self.node {
 			Token::Var(x) => {
-				return Some(Formula2::Var(Variable{ name: x.clone() }));
+				return Some(Formula::Var(Variable{ name: x.clone() }));
 			},
 			Token::Not => {  
 				match self.children.first() {
 					Some(child) => {
 						match child.to_formula() {
-							Some(p) => return Some(Formula2::Not(Box::new(p))),
+							Some(p) => return Some(Formula::Not(Box::new(p))),
 							None => return None,
 						}
 					},
@@ -150,7 +144,7 @@ impl AST {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula2::And(Box::new(p), Box::new(q))),
+						(Some(p), Some(q)) => return Some(Formula::And(Box::new(p), Box::new(q))),
 						_ => return None,
 					}
 				} else {
@@ -161,7 +155,7 @@ impl AST {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula2::Or(Box::new(p), Box::new(q))),
+						(Some(p), Some(q)) => return Some(Formula::Or(Box::new(p), Box::new(q))),
 						_ => return None,
 					}
 				} else {
@@ -172,7 +166,7 @@ impl AST {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula2::Implies(Box::new(p), Box::new(q))),
+						(Some(p), Some(q)) => return Some(Formula::Implies(Box::new(p), Box::new(q))),
 						_ => return None,
 					}
 				} else {
@@ -183,7 +177,7 @@ impl AST {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula2::Equiv(Box::new(p), Box::new(q))),
+						(Some(p), Some(q)) => return Some(Formula::Equiv(Box::new(p), Box::new(q))),
 						_ => return None,
 					}
 				} else {
@@ -194,7 +188,7 @@ impl AST {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula2::Xor(Box::new(p), Box::new(q))),
+						(Some(p), Some(q)) => return Some(Formula::Xor(Box::new(p), Box::new(q))),
 						_ => return None,
 					}
 				} else {
@@ -206,39 +200,35 @@ impl AST {
 	}
 }
 
-// E -> LeftParen E RightParen | Not E | E And E | E Or E | E Implies E | E Equiv E | E Xor E | Var(x)
-//
-// Left Factored:
-// E -> T X
-// X -> op E | eps
-// T -> (E) | ~E | Var
+// Productions
+// E 	-> eE
+// eE 	-> iE eE'
+// eE' 	-> EQUIV eE <3> | eps
+// iE 	-> xE iE'
+// iE' 	-> IMPLIES iE <3> | eps
+// xE 	-> oE xE'
+// xE' 	-> XOR xE <3> | eps
+// oE 	-> aE oE'
+// oE' 	-> OR oE <3> | eps
+// aE 	-> nE aE'
+// aE' 	-> AND aE <3> | eps
+// nE 	-> NOT nE <2> | X
+// X 	-> (E) | VAR
 
-// With semantic markers
-// E -> T X
-// X -> op E *3 | eps
-// T -> (E) | ~E *2 | Var
-// when * is consumed by the parser, merge that many elements at the top of the semantic stack
-// *3 pops three elements, *2 pops too, etc
+// Terminals: EQUIV, IMPLIES, XOR, OR, AND, NOT, VAR, (, )
+// Semantic markers: <n>
+// 		When a marker <n> is encountered on the stack, that many ASTs are popped from the
+// 		semantic stack. For n == 3, the middle element becomes the parent of the remaining 
+//		elements; for all other n, the bottom element becomes the parent.)
 
-//parse table Q:
-// Q(E, Var) = T X
-// Q(E, ~) = T X
-// Q(E, () = T X
-// Q(T, Var) = Var
-// Q(T, ~) = ~E
-// Q(T, () = (E)
-// Q(X, )) = eps
-// Q(X, op) = op E
-// Q(X, $) = eps
-
-/*enum ParseToken {
-	Terminal(Token),
-	E,
-	T,
-	X,
-	End,
-	Marker(usize),
-}*/
+// NOTE: all binary operations associate to the right
+// Precence is as follows:
+// 1. NOT
+// 2. AND
+// 3. OR
+// 4. XOR
+// 5. IMPLIES
+// 6. EQUIV
 
 enum ParseToken {
 	Terminal(Token),
@@ -278,44 +268,8 @@ pub fn parse(input: Vec<Token>) -> Option<AST> {
 	}
 }
 
-/*fn parse_table(nonterminal: ParseToken, terminal: &ParseToken) -> Option<Vec<ParseToken>> {
-	match nonterminal {
-		ParseToken::E => match terminal {
-			ParseToken::Terminal(t) 	=> match t {
-				Token::Var(x) 		=> Some(Vec::from([ParseToken::X, ParseToken::T])),
-				Token::Not 			=> Some(Vec::from([ParseToken::X, ParseToken::T])),
-				Token::LeftParen 	=> Some(Vec::from([ParseToken::X, ParseToken::T])),
-				_ 					=> None,
-			},
-			_ 							=> None,
-		},
-		ParseToken::T => match terminal {
-			ParseToken::Terminal(t) 	=> match t {
-				Token::Var(x) 		=> Some(Vec::from([ParseToken::Terminal(Token::Var(x.clone()))])),
-				Token::Not 			=> Some(Vec::from([ParseToken::Marker(2), ParseToken::E, ParseToken::Terminal(Token::Not)])),
-				Token::LeftParen	=> Some(Vec::from([ParseToken::Terminal(Token::RightParen), ParseToken::E, ParseToken::Terminal(Token::LeftParen)])),
-				_ 					=> None,
-			},
-			_ 							=> None,
-		},
-		ParseToken::X => match terminal {
-			ParseToken::Terminal(t) 	=> match t {
-				Token::RightParen 	=> Some(Vec::new()),
-				Token::And			=> Some(Vec::from([ParseToken::Marker(3), ParseToken::E, ParseToken::Terminal(Token::And)])),
-				Token::Or			=> Some(Vec::from([ParseToken::Marker(3), ParseToken::E, ParseToken::Terminal(Token::Or)])),
-				Token::Implies		=> Some(Vec::from([ParseToken::Marker(3), ParseToken::E, ParseToken::Terminal(Token::Implies)])),
-				Token::Equiv		=> Some(Vec::from([ParseToken::Marker(3), ParseToken::E, ParseToken::Terminal(Token::Equiv)])),
-				Token::Xor			=> Some(Vec::from([ParseToken::Marker(3), ParseToken::E, ParseToken::Terminal(Token::Xor)])),
-				_ 					=> None,
-			},
-			ParseToken::End 			=> Some(Vec::new()),
-			_ 							=> None,
-		},
-		_ 			=> None,
-	}
-}*/
-
-/*
+/* PARSE TABLE
+==============
          |    (    |    )    |   <2>   |   =>    |   VAR   |    +    |    ~    |    &    |   <3>   |   <=>   |    |    |    $    |
 ---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
    aE'   |         |eps      |         |eps      |         |eps      |         |&aE<3>   |eps      |eps      |eps      |eps      |
@@ -331,6 +285,7 @@ pub fn parse(input: Vec<Token>) -> Option<AST> {
    xE'   |         |eps      |         |eps      |         |+xE<3>   |         |         |eps      |eps      |         |eps      |
    oE'   |         |eps      |         |eps      |         |eps      |         |         |eps      |eps      ||oE<3>   |eps      |
    aE    |nEaE'    |         |         |         |nEaE'    |         |nEaE'    |         |         |         |         |         |
+==============
 */
 
 fn parse_table(nonterminal: ParseToken, terminal: &ParseToken) -> Option<Vec<ParseToken>> {
@@ -401,58 +356,6 @@ fn parse_table(nonterminal: ParseToken, terminal: &ParseToken) -> Option<Vec<Par
 	}
 }
 
-
-// semantic stack: push incomplete nodes to the stack
-// invariant: sem_stack will always contain <= 3 ASTs
-// when ) or $ consumed, if stack has <=1 AST then leave it alone, if 3 then pop them and make top and bottom children of middle, if 2 then make top the child of bottom
-// The first case will correspond to a single expression in the tree; the second is a binary op, flanked by its args; the third is a unary op
-
-// TODO your stack discipline above doesn't work; consider (x + y) + (y + z)
-// Update: fixed, TODO - fix documentation and overall code appearance; also TODO: fix Formula2 -> Formula, and change the structure of models to use variable name
-// instead of the variable object itself
-// TODO -- better error detection in lex/parse -- report where something breaks
-
-// JUST KIDDING DISCIPLINE IS STILL BUSTED: eg consider ~(~x) --- hint: this does not use the first case lmao
-// need to look at the second to last symbol to determine if it is unary or binary when calling evolve
-/*fn evolve_sem_stack(mut sem_stack: Vec<AST>) -> Vec<AST> {
-	/*if sem_stack.len() == 2 {
-		if let Some(mut unary) = sem_stack.pop() {
-			if let Some(arg) = sem_stack.pop() {
-				unary.insert_child(arg);
-				sem_stack.push(unary);
-			}
-		}
-	} else if sem_stack.len() >= 3 {
-		if let Some(arg2) = sem_stack.pop() {
-			if let Some(mut binary) = sem_stack.pop() {
-				if let Some(arg1) = sem_stack.pop() {
-					binary.insert_child(arg1);
-					binary.insert_child(arg2);
-					sem_stack.push(binary);
-				}
-			}
-		}
-	}
-	println!("!! SIZE OF SEM STACK {} !!", sem_stack.len());
-	return sem_stack;*/
-	if sem_stack.len() >= 2 {
-		if let (Some(arg1), Some(mut op)) = (sem_stack.pop(), sem_stack.pop()) {
-			match op.node {
-				Token::Not => { op.insert_child(arg1); sem_stack.push(op); },
-				Token::Var(_) | Token::LeftParen | Token::RightParen => { println!("PARSE ERROR: INVALID ENTRY IN SEMANTIC STACK") }, // TODO error
-				_ => { 
-						if let Some(arg0) = sem_stack.pop() {
-							op.insert_child(arg0);
-							op.insert_child(arg1);
-							sem_stack.push(op);
-						} 
-				},
-			}
-		}
-	}
-	return sem_stack;
-}*/
-
 fn evolve_sem_stack(mut sem_stack: Vec<AST>, n: usize) -> Vec<AST>{
 	if sem_stack.len() >= n && n > 0 {
 		let mut xs: Vec<AST> = sem_stack.split_off(sem_stack.len() - n);
@@ -468,7 +371,7 @@ fn evolve_sem_stack(mut sem_stack: Vec<AST>, n: usize) -> Vec<AST>{
 		xs.reverse();
 		for _ in 0..n-1 {
 			if let Some(x) = xs.pop() {
-				op.insert_child(x); // TODO this reverses order??
+				op.insert_child(x);
 			}
 		}
 		sem_stack.push(op);
@@ -479,49 +382,13 @@ fn evolve_sem_stack(mut sem_stack: Vec<AST>, n: usize) -> Vec<AST>{
 }
 
 fn push_sem_stack(terminal: Token, mut sem_stack: Vec<AST>) -> Vec<AST> {
-	println!("!! SIZE OF SEM STACK {} !!", sem_stack.len());
 	match terminal {
-		Token::LeftParen  => return sem_stack,
-		Token::RightParen  => return sem_stack,
-		//Token::RightParen => return evolve_sem_stack(sem_stack), // TODO
-		_ 				  => { sem_stack.push(AST::new(terminal, None)); return sem_stack; },
+		Token::LeftParen | Token::RightParen  => return sem_stack,
+		_ 				  					  => { sem_stack.push(AST::new(terminal, None)); return sem_stack; },
 	}
 }
 
 fn parse_LL1(mut stack: Vec<ParseToken>, mut input: Vec<ParseToken>, mut sem_stack: Vec<AST>) -> Option<Vec<AST>> {
-	/*print!("STACK: ");
-	for v in stack.iter().rev() {
-		match v {
-			ParseToken::Terminal(t) => print!("{} ", t),
-			ParseToken::E => print!("E "),
-			ParseToken::X => print!("X "),
-			ParseToken::T => print!("T "),
-			ParseToken::End => print!("$ "),
-			ParseToken::Marker(n) => print!("<{}> ", n),
-		}
-	}
-	print!("\n\nINPUT: ");
-	for v in input.iter().rev() {
-		match v {
-			ParseToken::Terminal(t) => print!("{} ", t),
-			ParseToken::E => print!("E "),
-			ParseToken::X => print!("X "),
-			ParseToken::T => print!("T "),
-			ParseToken::End => print!("$ "),
-			ParseToken::Marker(n) => print!("<{}> ", n),
-		}
-	}
-
-	print!("\n\nSEM STACK:\n");
-	for v in sem_stack.iter() {
-		print!("  AST: {} [", v.node);
-		for child in v.children.iter() {
-			print!("{}, ", child.node);
-		}
-		print!("]\n");
-	}
-	print!("\n==========\n");*/
-
 	match (stack.pop(), input.last()) {
 		(Some(v), Some(x)) 		=> {
 			match v {
@@ -544,9 +411,6 @@ fn parse_LL1(mut stack: Vec<ParseToken>, mut input: Vec<ParseToken>, mut sem_sta
 					// End of stack
 					match x {
 						ParseToken::End => {
-							/*while (sem_stack.len() > 1) {
-								sem_stack = evolve_sem_stack(sem_stack);
-							}*/ // TODO
 							return Some(sem_stack);
 						},
 						_ 	=> return None,
@@ -576,7 +440,7 @@ fn parse_LL1(mut stack: Vec<ParseToken>, mut input: Vec<ParseToken>, mut sem_sta
 	}
 }
 
-pub fn read_input(input: String) -> Option<Formula2> {
+pub fn read_input(input: String) -> Option<Formula> {
 	if let Some(lexed_token_stream) = lex(&input) {
 		if let Some(parsed_AST) = parse(lexed_token_stream) {
 			return parsed_AST.to_formula();

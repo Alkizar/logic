@@ -12,9 +12,7 @@ impl fmt::Display for Variable {
 	}
 }
 
-pub type Model<'a> = HashMap<&'a Variable, bool>;
-
-pub type Model2 = HashMap<String, bool>;
+pub type Model = HashMap<String, bool>;
 
 fn not(a: Option<bool>) -> Option<bool> {
 	match a {
@@ -56,79 +54,40 @@ fn extract_bool(t: Option<&bool>) -> Option<bool> {
 	}
 }
 
-pub enum Formula<'a> {
-	Var 	(&'a Variable),
-	Not		(&'a Formula<'a>),
-	And		(&'a Formula<'a>, &'a Formula<'a>),
-	Or 		(&'a Formula<'a>, &'a Formula<'a>),
-	Implies	(&'a Formula<'a>, &'a Formula<'a>),
-	Equiv	(&'a Formula<'a>, &'a Formula<'a>),
-	Xor		(&'a Formula<'a>, &'a Formula<'a>),
-}
-
-// TODO
-pub enum Formula2 {
+pub enum Formula {
 	Var 	(Variable),
-	Not		(Box<Formula2>),
-	And		(Box<Formula2>, Box<Formula2>),
-	Or 		(Box<Formula2>, Box<Formula2>),
-	Implies	(Box<Formula2>, Box<Formula2>),
-	Equiv	(Box<Formula2>, Box<Formula2>),
-	Xor		(Box<Formula2>, Box<Formula2>),
+	Not		(Box<Formula>),
+	And		(Box<Formula>, Box<Formula>),
+	Or 		(Box<Formula>, Box<Formula>),
+	Implies	(Box<Formula>, Box<Formula>),
+	Equiv	(Box<Formula>, Box<Formula>),
+	Xor		(Box<Formula>, Box<Formula>),
 }
 
-impl fmt::Display for Formula2 {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Formula2::Var(x) 		=> write!(f, "{}", x),
-			Formula2::Not(y) 		=> write!(f, "~({})", y),
-			Formula2::And(y, z) 	=> write!(f, "({}) & ({})", y, z),
-			Formula2::Or(y, z) 		=> write!(f, "({}) | ({})", y, z),
-			Formula2::Implies(y, z) => write!(f, "({}) => ({})", y, z),
-			Formula2::Equiv(y, z) 	=> write!(f, "({}) <=> ({})", y, z),
-			Formula2::Xor(y, z) 	=> write!(f, "({}) + ({})", y, z),
-		}
-	}
-}
-
-impl Formula2 {
-	pub fn interpret(&self, v: &Model2) -> Option<bool> {
-		match self { 
-			Formula2::Var(x) 		=> extract_bool(v.get(&x.name)),
-			Formula2::Not(y) 		=> not(y.interpret(v)),
-			Formula2::And(y, z) 	=> and(y.interpret(v), z.interpret(v)),
-			Formula2::Or(y, z) 		=> or(y.interpret(v), z.interpret(v)),
-			Formula2::Implies(y, z) => implies(y.interpret(v), z.interpret(v)),
-			Formula2::Equiv(y, z) 	=> equiv(y.interpret(v), z.interpret(v)),
-			Formula2::Xor(y, z) 	=> xor(y.interpret(v), z.interpret(v)),
-		}
-	}
-}
-
-impl Formula<'_> {
-	pub fn interpret(&self, v: &Model) -> Option<bool> {
-		match self { 
-			Formula::Var(x) 		=> extract_bool(v.get(x)),
-			Formula::Not(y) 		=> not(y.interpret(v)),
-			Formula::And(y, z) 		=> and(y.interpret(v), z.interpret(v)),
-			Formula::Or(y, z) 		=> or(y.interpret(v), z.interpret(v)),
-			Formula::Implies(y, z) 	=> implies(y.interpret(v), z.interpret(v)),
-			Formula::Equiv(y, z) 	=> equiv(y.interpret(v), z.interpret(v)),
-			Formula::Xor(y, z) 		=> xor(y.interpret(v), z.interpret(v)),
-		}
-	}
-}
-
-impl fmt::Display for Formula<'_> {
+impl fmt::Display for Formula {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
 			Formula::Var(x) 		=> write!(f, "{}", x),
 			Formula::Not(y) 		=> write!(f, "~({})", y),
-			Formula::And(y, z) 		=> write!(f, "({}) & ({})", y, z),
+			Formula::And(y, z) 	=> write!(f, "({}) & ({})", y, z),
 			Formula::Or(y, z) 		=> write!(f, "({}) | ({})", y, z),
-			Formula::Implies(y, z) 	=> write!(f, "({}) => ({})", y, z),
+			Formula::Implies(y, z) => write!(f, "({}) => ({})", y, z),
 			Formula::Equiv(y, z) 	=> write!(f, "({}) <=> ({})", y, z),
-			Formula::Xor(y, z) 		=> write!(f, "({}) + ({})", y, z),
+			Formula::Xor(y, z) 	=> write!(f, "({}) + ({})", y, z),
+		}
+	}
+}
+
+impl Formula {
+	pub fn interpret(&self, v: &Model) -> Option<bool> {
+		match self { 
+			Formula::Var(x) 		=> extract_bool(v.get(&x.name)),
+			Formula::Not(y) 		=> not(y.interpret(v)),
+			Formula::And(y, z) 	=> and(y.interpret(v), z.interpret(v)),
+			Formula::Or(y, z) 		=> or(y.interpret(v), z.interpret(v)),
+			Formula::Implies(y, z) => implies(y.interpret(v), z.interpret(v)),
+			Formula::Equiv(y, z) 	=> equiv(y.interpret(v), z.interpret(v)),
+			Formula::Xor(y, z) 	=> xor(y.interpret(v), z.interpret(v)),
 		}
 	}
 }
