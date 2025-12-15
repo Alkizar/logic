@@ -14,6 +14,8 @@ impl fmt::Display for Variable {
 
 pub type Model<'a> = HashMap<&'a Variable, bool>;
 
+pub type Model2 = HashMap<String, bool>;
+
 fn not(a: Option<bool>) -> Option<bool> {
 	match a {
 		Some(t) => Some(!t),
@@ -80,11 +82,25 @@ impl fmt::Display for Formula2 {
 		match self {
 			Formula2::Var(x) 		=> write!(f, "{}", x),
 			Formula2::Not(y) 		=> write!(f, "~({})", y),
-			Formula2::And(y, z) 		=> write!(f, "({}) & ({})", y, z),
+			Formula2::And(y, z) 	=> write!(f, "({}) & ({})", y, z),
 			Formula2::Or(y, z) 		=> write!(f, "({}) | ({})", y, z),
-			Formula2::Implies(y, z) 	=> write!(f, "({}) => ({})", y, z),
+			Formula2::Implies(y, z) => write!(f, "({}) => ({})", y, z),
 			Formula2::Equiv(y, z) 	=> write!(f, "({}) <=> ({})", y, z),
-			Formula2::Xor(y, z) 		=> write!(f, "({}) + ({})", y, z),
+			Formula2::Xor(y, z) 	=> write!(f, "({}) + ({})", y, z),
+		}
+	}
+}
+
+impl Formula2 {
+	pub fn interpret(&self, v: &Model2) -> Option<bool> {
+		match self { 
+			Formula2::Var(x) 		=> extract_bool(v.get(&x.name)),
+			Formula2::Not(y) 		=> not(y.interpret(v)),
+			Formula2::And(y, z) 	=> and(y.interpret(v), z.interpret(v)),
+			Formula2::Or(y, z) 		=> or(y.interpret(v), z.interpret(v)),
+			Formula2::Implies(y, z) => implies(y.interpret(v), z.interpret(v)),
+			Formula2::Equiv(y, z) 	=> equiv(y.interpret(v), z.interpret(v)),
+			Formula2::Xor(y, z) 	=> xor(y.interpret(v), z.interpret(v)),
 		}
 	}
 }
