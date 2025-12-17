@@ -130,7 +130,7 @@ fn main() {
         }
     }*/
 
-    let premise1 = String::from("phi");
+    /*let premise1 = String::from("phi");
     let conc1 = String::from("phi | psi");
     let free = String::from("psi");
     let given1 = String::from("(x & y)");
@@ -148,5 +148,18 @@ fn main() {
         for conclusion in apply_rule_with_supplied(formulae, &rule_oi, supplied).iter() {
             println!("{}", conclusion);
         }
+    }*/
+
+    let mut proof = Proof::new();
+    let rules = initialize_rules();
+    let premise_1 = String::from("x");
+    let premise_2 = String::from("x => y");
+    if let (Some(p1), Some(p2)) = (read_input(premise_1), read_input(premise_2)) {
+        proof.add_premise(p1);
+        proof.add_premise(p2);
+        if let Some(rule) = rules.get(&"ImpliesElim".to_string()) {
+            proof.infer(rule, Vec::from([0, 1]));
+        }
     }
+    print!("{}", proof);
 }

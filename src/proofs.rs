@@ -222,7 +222,7 @@ fn initialize_and_intro(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("psi");
 	let conclusion = String::from("phi & psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_ai: InferenceRule = InferenceRule{ name: name.clone(), premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_ai: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
 		Some(rule_ai)
 	} else {
 		// ERROR
@@ -236,7 +236,7 @@ fn initialize_and_elim(name: String) -> Option<InferenceRule> {
 	let conclusion_1 = String::from("phi");
 	let conclusion_2 = String::from("psi");
 	if let (Some(p), Some(c1), Some(c2)) = (read_input(premise), read_input(conclusion_1), read_input(conclusion_2)) {
-		let rule_ae: InferenceRule = InferenceRule{ name: name.clone(), premises: Vec::from([p]), conclusions: Vec::from([c1, c2]) };
+		let rule_ae: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c1, c2]) };
 		Some(rule_ae)
 	} else {
 		// ERROR
@@ -249,7 +249,7 @@ fn initialize_or_intro(name: String) -> Option<InferenceRule> {
 	let premise = String::from("phi");
 	let conclusion = String::from("phi | psi");
 	if let (Some(p), Some(c)) = (read_input(premise), read_input(conclusion)) {
-		let rule_oi: InferenceRule = InferenceRule{ name: name.clone(), premises: Vec::from([p]), conclusions: Vec::from([c]) };
+		let rule_oi: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c]) };
 		Some(rule_oi)
 	} else {
 		// ERROR
@@ -264,7 +264,7 @@ fn initialize_or_elim(name: String) -> Option<InferenceRule> {
 	let premise_3 = String::from("psi => theta");
 	let conclusion = String::from("theta");
 	if let (Some(p1), Some(p2), Some(p3), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(premise_3), read_input(conclusion)) {
-		let rule_oe: InferenceRule = InferenceRule{ name: name.clone(), premises: Vec::from([p1, p2, p3]), conclusions: Vec::from([c]) };
+		let rule_oe: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2, p3]), conclusions: Vec::from([c]) };
 		Some(rule_oe)
 	} else {
 		// ERROR
@@ -278,7 +278,7 @@ fn initialize_implies_elim(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("phi");
 	let conclusion = String::from("psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_ie: InferenceRule = InferenceRule{ name: name.clone(), premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_ie: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
 		Some(rule_ie)
 	} else {
 		// ERROR
@@ -292,7 +292,7 @@ fn initialize_xor_intro(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("~psi");
 	let conclusion = String::from("phi + psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_xi: InferenceRule = InferenceRule{ name: name.clone(), premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_xi: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
 		Some(rule_xi)
 	} else {
 		// ERROR
@@ -306,7 +306,7 @@ fn initialize_xor_elim(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("~phi");
 	let conclusion = String::from("psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_xe: InferenceRule = InferenceRule{ name: name.clone(), premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_xe: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
 		Some(rule_xe)
 	} else {
 		// ERROR
@@ -320,7 +320,7 @@ fn initialize_equiv_intro(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("psi => phi");
 	let conclusion = String::from("phi <=> psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_bi: InferenceRule = InferenceRule{ name: name.clone(), premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_bi: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
 		Some(rule_bi)
 	} else {
 		// ERROR
@@ -328,43 +328,117 @@ fn initialize_equiv_intro(name: String) -> Option<InferenceRule> {
 	}
 }
 
-// XorIntro
+// EquivElim
 fn initialize_equiv_elim(name: String) -> Option<InferenceRule> {
 	let premise = String::from("phi <=> psi");
 	let conclusion_1 = String::from("phi => psi");
 	let conclusion_2 = String::from("psi => phi");
-	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_xi: InferenceRule = InferenceRule{ name: name.clone(), premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
-		Some(rule_xi)
+	if let (Some(p), Some(c1), Some(c2)) = (read_input(premise), read_input(conclusion_1), read_input(conclusion_2)) {
+		let rule_be: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c1, c2]) };
+		Some(rule_be)
 	} else {
 		// ERROR
 		None
 	}
 }
 
-pub fn initialize_rules() -> HashMap<String, InferenceRule>{
+// NotIntro
+fn initialize_not_intro(name: String) -> Option<InferenceRule> {
+	let premise_1 = String::from("phi => psi");
+	let premise_2 = String::from("phi => ~psi");
+	let conclusion = String::from("~phi");
+	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
+		let rule_ni: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		Some(rule_ni)
+	} else {
+		// ERROR
+		None
+	}
+}
+
+// NotElim
+fn initialize_not_elim(name: String) -> Option<InferenceRule> {
+	let premise = String::from("~~phi");
+	let conclusion = String::from("phi");
+	if let (Some(p), Some(c)) = (read_input(premise), read_input(conclusion)) {
+		let rule_ne: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c]) };
+		Some(rule_ne)
+	} else {
+		// ERROR
+		None
+	}
+}
+
+pub fn initialize_rules() -> HashMap<String, InferenceRule> {
+	let mut rules: HashMap<String, InferenceRule> = HashMap::new();
 	// AndIntro
 
+	match initialize_and_intro("AndIntro".to_string()) {
+		Some(rule) => { rules.insert("AndIntro".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate AndIntro rule"),
+	};
 
 	// AndElim
+	match initialize_and_elim("AndElim".to_string()) {
+		Some(rule) => { rules.insert("AndElim".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate AndElim rule"),
+	};
 
 	// OrIntro [TODO]
+	match initialize_or_intro("OrIntro".to_string()) {
+		Some(rule) => { rules.insert("OrIntro".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate OrIntro rule"),
+	};
 
 	// OrElim
+	match initialize_or_elim("OrElim".to_string()) {
+		Some(rule) => { rules.insert("OrElim".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate OrElim rule"),
+	};
 
 	// ImpliesElim
+	match initialize_implies_elim("ImpliesElim".to_string()) {
+		Some(rule) => { rules.insert("ImpliesElim".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate ImpliesElim rule"),
+	};
 
 	// XorIntro
+	match initialize_xor_intro("XorIntro".to_string()) {
+		Some(rule) => { rules.insert("XorIntro".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate XorIntro rule"),
+	};
 
 	// XorElim
+	match initialize_xor_elim("XorElim".to_string()) {
+		Some(rule) => { rules.insert("XorElim".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate XorElim rule"),
+	};
 
 	// EquivIntro
+	match initialize_equiv_intro("EquivIntro".to_string()) {
+		Some(rule) => { rules.insert("EquivIntro".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate EquivIntro rule"),
+	};
 
 	// EquivElim
+	match initialize_equiv_elim("EquivElim".to_string()) {
+		Some(rule) => { rules.insert("EquivElim".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate EquivElim rule"),
+	};
 
 	// NotIntro
+	match initialize_not_intro("NotIntro".to_string()) {
+		Some(rule) => { rules.insert("NotIntro".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate NotIntro rule"),
+	};
 
 	// NotElim
+	match initialize_not_elim("NotElim".to_string()) {
+		Some(rule) => { rules.insert("NotElim".to_string(), rule); },
+		None => eprintln!("ERROR: failed to generate NotElim rule"),
+	};
+
+	rules
 }
 
 impl fmt::Display for InferenceRule {
@@ -395,6 +469,17 @@ enum Derivation {
 	ImplicationIntro,
 }
 
+impl fmt::Display for Derivation {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Derivation::Rule(name) 		 => write!(f, "[{}]", name),
+			Derivation::Assumption 		 => write!(f, "[A]"),
+			Derivation::Premise 		 => write!(f, "[P]"),
+			Derivation::ImplicationIntro => write!(f, "[ImpliesIntro]"),
+		}
+	}
+}
+
 struct ProofStep {
 	formula: Formula,
 	rule: Derivation,
@@ -402,11 +487,33 @@ struct ProofStep {
 	index: usize,
 }
 
-struct Proof {
+impl fmt::Display for ProofStep {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		let mut display_str = String::new();
+		display_str.push_str(&format!("{}. ", self.index));
+		for _ in 0..self.depth {
+			display_str.push_str("| ");
+		}
+		display_str.push_str(&format!("{}    {}\n", self.formula, self.rule));
+		write!(f, "{}", display_str)
+	}
+}
+
+pub struct Proof {
 	steps: Vec<ProofStep>,
 	bottom_depth: usize,
 	bottom_index: usize,
 	assumption_stack: Vec<Formula>,
+}
+
+impl fmt::Display for Proof {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		let mut display_str = String::new();
+		for proof_step in self.steps.iter() {
+			display_str.push_str(&format!("{}", proof_step));
+		}
+		write!(f, "{}", display_str)
+	}
 }
 
 impl Proof {
