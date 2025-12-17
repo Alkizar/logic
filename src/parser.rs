@@ -1,5 +1,4 @@
 use std::fmt;
-use std::collections::HashMap;
 use structures::*;
 
 #[derive(PartialEq, Eq)]
@@ -31,13 +30,15 @@ impl fmt::Display for Token {
 	}
 }
 
-pub fn lex(string: &str) -> Option<Vec<Token>> {
+// ============= LEXER =============
+
+fn lex(string: &str) -> Option<Vec<Token>> {
 	let toks: Vec<Token> = Vec::new();
 	next_waiting(string, toks)
 }
 
 fn lex_error(c: char, string: &str, state: &str) {
-	println!("lexing error: unexpected character {} in {} while in state {}", c, string, state);
+	eprintln!("LEXING ERROR: unexpected character {} in {} while in state {}", c, string, state);
 }
 
 // NOTE: vec.push can panic; TODO: make this safer
@@ -107,6 +108,12 @@ fn next_equiv(string: &str, mut toks: Vec<Token>, prev: char) -> Option<Vec<Toke
 	}
 }
 
+// ============= PARSER =============
+
+fn ast_error(node: &Token) {
+	eprintln!("SEMANTIC ERROR: failed to construct AST node {}", node);
+}
+
 struct AST {
 	node: Token,
 	children: Vec<AST>,
@@ -124,95 +131,94 @@ impl AST {
 		self.children.push(child);
 	}
 
+	// TODO -- clean up the nested matches
 	fn to_formula<'a>(&self) -> Option<Formula> { 
 		match &self.node {
-			Token::Var(x) => {
-				return Some(Formula::Var(Variable{ name: x.clone() }));
-			},
-			Token::Not => {  
+			Token::Var(x) => Some(Formula::Var(Variable{ name: x.clone() })),
+			Token::Not => {
 				match self.children.first() {
 					Some(child) => {
 						match child.to_formula() {
-							Some(p) => return Some(Formula::Not(Box::new(p))),
-							None => return None,
+							Some(p) => Some(Formula::Not(Box::new(p))),
+							None => None,
 						}
 					},
-					None => return None,
+					None => None,
 				}
 			},
 			Token::And => {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula::And(Box::new(p), Box::new(q))),
-						_ => return None,
+						(Some(p), Some(q)) => Some(Formula::And(Box::new(p), Box::new(q))),
+						_ => None,
 					}
 				} else {
-					return None;
+					None
 				}
 			},
 			Token::Or => {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula::Or(Box::new(p), Box::new(q))),
-						_ => return None,
+						(Some(p), Some(q)) => Some(Formula::Or(Box::new(p), Box::new(q))),
+						_ => None,
 					}
 				} else {
-					return None;
+					None
 				}
 			},
 			Token::Implies => {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula::Implies(Box::new(p), Box::new(q))),
-						_ => return None,
+						(Some(p), Some(q)) => Some(Formula::Implies(Box::new(p), Box::new(q))),
+						_ => None,
 					}
 				} else {
-					return None;
+					None
 				}
 			},
 			Token::Equiv => {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula::Equiv(Box::new(p), Box::new(q))),
-						_ => return None,
+						(Some(p), Some(q)) => Some(Formula::Equiv(Box::new(p), Box::new(q))),
+						_ => None,
 					}
 				} else {
-					return None;
+					None
 				}
 			},
 			Token::Xor => {
 				let mut first_two_children = self.children.iter().take(2);
 				if let (Some(arg1), Some(arg2)) = (first_two_children.next(), first_two_children.next()) { 
 					match (arg1.to_formula(), arg2.to_formula()) {
-						(Some(p), Some(q)) => return Some(Formula::Xor(Box::new(p), Box::new(q))),
-						_ => return None,
+						(Some(p), Some(q)) => Some(Formula::Xor(Box::new(p), Box::new(q))),
+						_ => None,
 					}
 				} else {
-					return None;
+					None
 				}
 			},
-			_ => return None, // ERROR
+			_ => None, // ERROR
 		}
 	}
 }
 
 // Productions
-// E 	-> eE
-// eE 	-> iE eE'
-// eE' 	-> EQUIV eE <3> | eps
-// iE 	-> xE iE'
-// iE' 	-> IMPLIES iE <3> | eps
-// xE 	-> oE xE'
-// xE' 	-> XOR xE <3> | eps
-// oE 	-> aE oE'
-// oE' 	-> OR oE <3> | eps
-// aE 	-> nE aE'
-// aE' 	-> AND aE <3> | eps
-// nE 	-> NOT nE <2> | X
+// E 	-> EE
+// EE 	-> IE EE'
+// EE' 	-> EQUIV EE <3> | eps
+// IE 	-> XE IE'
+// IE' 	-> IMPLIES IE <3> | eps
+// XE 	-> OE XE'
+// XE' 	-> XOR XE <3> | eps
+// OE 	-> AE OE'
+// OE' 	-> OR OE <3> | eps
+// AE 	-> NE AE'
+// AE' 	-> AND AE <3> | eps
+// NE 	-> NOT NE <2> | X
 // X 	-> (E) | VAR
 
 // Terminals: EQUIV, IMPLIES, XOR, OR, AND, NOT, VAR, (, )
@@ -233,20 +239,24 @@ impl AST {
 enum ParseToken {
 	Terminal(Token),
 	E,
-	eE,
-	eE_,
-	iE,
-	iE_,
-	xE,
-	xE_,
-	oE,
-	oE_,
-	aE,
-	aE_,
-	nE,
+	EE,
+	EE_,
+	IE,
+	IE_,
+	XE,
+	XE_,
+	OE,
+	OE_,
+	AE,
+	AE_,
+	NE,
 	X,
 	End,
 	Marker(usize),
+}
+
+fn parse_error() {
+	eprintln!("SYNTAX ERROR: ");
 }
 
 fn process_lex_stream(input: Vec<Token>) -> Vec<ParseToken> {
@@ -258,13 +268,16 @@ fn process_lex_stream(input: Vec<Token>) -> Vec<ParseToken> {
 }
 
 
-pub fn parse(input: Vec<Token>) -> Option<AST> {
+fn parse(input: Vec<Token>) -> Option<AST> {
 	let parse_token_input: Vec<ParseToken> = process_lex_stream(input);
 	let stack: Vec<ParseToken> = Vec::from([ParseToken::End, ParseToken::E]);
 	let sem_stack: Vec<AST> = Vec::new();
-	match parse_LL1(stack, parse_token_input, sem_stack) {
-		Some(mut xs) => return xs.pop(),
-		None => { println!("PARSE ERROR: LL(1) failed."); return None; },
+	match parse_ll1(stack, parse_token_input, sem_stack) {
+		Some(mut xs) => xs.pop(),
+		None 		 => { 
+			println!("PARSE ERROR: LL(1) failed."); // TODO -- E2E failure in parser
+			None 
+		},
 	}
 }
 
@@ -272,92 +285,92 @@ pub fn parse(input: Vec<Token>) -> Option<AST> {
 ==============
          |    (    |    )    |   <2>   |   =>    |   VAR   |    +    |    ~    |    &    |   <3>   |   <=>   |    |    |    $    |
 ---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-   aE'   |         |eps      |         |eps      |         |eps      |         |&aE<3>   |eps      |eps      |eps      |eps      |
-   eE    |iEeE'    |         |         |         |iEeE'    |         |iEeE'    |         |         |         |         |         |
-   eE'   |         |eps      |         |         |         |         |         |         |eps      |<=>eE<3> |         |eps      |
-   nE    |X        |         |         |         |X        |         |~nE<2>   |         |         |         |         |         |
+   AE'   |         |eps      |         |eps      |         |eps      |         |&AE<3>   |eps      |eps      |eps      |eps      |
+   EE    |IE EE'   |         |         |         |IE EE'   |         |IE EE'   |         |         |         |         |         |
+   EE'   |         |eps      |         |         |         |         |         |         |eps      |<=>EE<3> |         |eps      |
+   NE    |X        |         |         |         |X        |         |~NE<2>   |         |         |         |         |         |
     X    |(E)      |         |         |         |VAR      |         |         |         |         |         |         |         |
-    E    |eE       |         |         |         |eE       |         |eE       |         |         |         |         |         |
-   xE    |oExE'    |         |         |         |oExE'    |         |oExE'    |         |         |         |         |         |
-   oE    |aEoE'    |         |         |         |aEoE'    |         |aEoE'    |         |         |         |         |         |
-   iE    |xEiE'    |         |         |         |xEiE'    |         |xEiE'    |         |         |         |         |         |
-   iE'   |         |eps      |         |=>iE<3>  |         |         |         |         |eps      |eps      |         |eps      |
-   xE'   |         |eps      |         |eps      |         |+xE<3>   |         |         |eps      |eps      |         |eps      |
-   oE'   |         |eps      |         |eps      |         |eps      |         |         |eps      |eps      ||oE<3>   |eps      |
-   aE    |nEaE'    |         |         |         |nEaE'    |         |nEaE'    |         |         |         |         |         |
+    E    |EE       |         |         |         |EE       |         |EE       |         |         |         |         |         |
+   XE    |OE XE'   |         |         |         |OE XE'   |         |OE XE'   |         |         |         |         |         |
+   OE    |AE OE'   |         |         |         |AE OE'   |         |AE OE'   |         |         |         |         |         |
+   IE    |XE IE'   |         |         |         |XE IE'   |         |XE IE'   |         |         |         |         |         |
+   IE'   |         |eps      |         |=>IE<3>  |         |         |         |         |eps      |eps      |         |eps      |
+   XE'   |         |eps      |         |eps      |         |+XE<3>   |         |         |eps      |eps      |         |eps      |
+   OE'   |         |eps      |         |eps      |         |eps      |         |         |eps      |eps      ||OE<3>   |eps      |
+   AE    |NE AE'   |         |         |         |NE AE'   |         |NE AE'   |         |         |         |         |         |
 ==============
 */
 
 fn parse_table(nonterminal: ParseToken, terminal: &ParseToken) -> Option<Vec<ParseToken>> {
 	match (nonterminal, terminal) {
 		// E
-		(ParseToken::E, ParseToken::Terminal(Token::LeftParen)) => Some(Vec::from([ParseToken::eE])),
-		(ParseToken::E, ParseToken::Terminal(Token::Not)) 		=> Some(Vec::from([ParseToken::eE])),
-		(ParseToken::E, ParseToken::Terminal(Token::Var(_))) 	=> Some(Vec::from([ParseToken::eE])),
-		// eE
-		(ParseToken::eE, ParseToken::Terminal(Token::LeftParen)) => Some(Vec::from([ParseToken::eE_, ParseToken::iE])),
-		(ParseToken::eE, ParseToken::Terminal(Token::Not)) 		 => Some(Vec::from([ParseToken::eE_, ParseToken::iE])),
-		(ParseToken::eE, ParseToken::Terminal(Token::Var(_))) 	 => Some(Vec::from([ParseToken::eE_, ParseToken::iE])),
-		// eE'
-		(ParseToken::eE_, ParseToken::Terminal(Token::RightParen)) => Some(Vec::new()),
-		(ParseToken::eE_, ParseToken::End) 						   => Some(Vec::new()),
-		(ParseToken::eE_, ParseToken::Terminal(Token::Equiv))	   => Some(Vec::from([ParseToken::Marker(3), ParseToken::eE, ParseToken::Terminal(Token::Equiv)])),
-		// iE
-		(ParseToken::iE, ParseToken::Terminal(Token::LeftParen)) => Some(Vec::from([ParseToken::iE_, ParseToken::xE])),
-		(ParseToken::iE, ParseToken::Terminal(Token::Not)) 		 => Some(Vec::from([ParseToken::iE_, ParseToken::xE])),
-		(ParseToken::iE, ParseToken::Terminal(Token::Var(_))) 	 => Some(Vec::from([ParseToken::iE_, ParseToken::xE])),
-		// iE'
-		(ParseToken::iE_, ParseToken::Terminal(Token::RightParen)) 	=> Some(Vec::new()),
-		(ParseToken::iE_, ParseToken::Terminal(Token::Equiv)) 		=> Some(Vec::new()),
-		(ParseToken::iE_, ParseToken::End) 							=> Some(Vec::new()),
-		(ParseToken::iE_, ParseToken::Terminal(Token::Implies)) 	=> Some(Vec::from([ParseToken::Marker(3), ParseToken::iE, ParseToken::Terminal(Token::Implies)])),
-		// xE
-		(ParseToken::xE, ParseToken::Terminal(Token::LeftParen)) => Some(Vec::from([ParseToken::xE_, ParseToken::oE])),
-		(ParseToken::xE, ParseToken::Terminal(Token::Not)) 		 => Some(Vec::from([ParseToken::xE_, ParseToken::oE])),
-		(ParseToken::xE, ParseToken::Terminal(Token::Var(_))) 	 => Some(Vec::from([ParseToken::xE_, ParseToken::oE])),
-		// xE'
-		(ParseToken::xE_, ParseToken::Terminal(Token::RightParen)) 	=> Some(Vec::new()),
-		(ParseToken::xE_, ParseToken::Terminal(Token::Equiv)) 		=> Some(Vec::new()),
-		(ParseToken::xE_, ParseToken::Terminal(Token::Implies)) 	=> Some(Vec::new()),
-		(ParseToken::xE_, ParseToken::End) 							=> Some(Vec::new()),
-		(ParseToken::xE_, ParseToken::Terminal(Token::Xor)) 		=> Some(Vec::from([ParseToken::Marker(3), ParseToken::xE, ParseToken::Terminal(Token::Xor)])),
-		// oE
-		(ParseToken::oE, ParseToken::Terminal(Token::LeftParen)) => Some(Vec::from([ParseToken::oE_, ParseToken::aE])),
-		(ParseToken::oE, ParseToken::Terminal(Token::Not)) 		 => Some(Vec::from([ParseToken::oE_, ParseToken::aE])),
-		(ParseToken::oE, ParseToken::Terminal(Token::Var(_))) 	 => Some(Vec::from([ParseToken::oE_, ParseToken::aE])),
-		// oE'
-		(ParseToken::oE_, ParseToken::Terminal(Token::RightParen)) 	=> Some(Vec::new()),
-		(ParseToken::oE_, ParseToken::Terminal(Token::Equiv)) 		=> Some(Vec::new()),
-		(ParseToken::oE_, ParseToken::Terminal(Token::Implies)) 	=> Some(Vec::new()),
-		(ParseToken::oE_, ParseToken::Terminal(Token::Xor)) 		=> Some(Vec::new()),
-		(ParseToken::oE_, ParseToken::End) 							=> Some(Vec::new()),
-		(ParseToken::oE_, ParseToken::Terminal(Token::Or)) 		=> Some(Vec::from([ParseToken::Marker(3), ParseToken::oE, ParseToken::Terminal(Token::Or)])),
-		// aE
-		(ParseToken::aE, ParseToken::Terminal(Token::LeftParen)) => Some(Vec::from([ParseToken::aE_, ParseToken::nE])),
-		(ParseToken::aE, ParseToken::Terminal(Token::Not)) 		 => Some(Vec::from([ParseToken::aE_, ParseToken::nE])),
-		(ParseToken::aE, ParseToken::Terminal(Token::Var(_))) 	 => Some(Vec::from([ParseToken::aE_, ParseToken::nE])),
-		// aE'
-		(ParseToken::aE_, ParseToken::Terminal(Token::RightParen)) 	=> Some(Vec::new()),
-		(ParseToken::aE_, ParseToken::Terminal(Token::Equiv)) 		=> Some(Vec::new()),
-		(ParseToken::aE_, ParseToken::Terminal(Token::Implies)) 	=> Some(Vec::new()),
-		(ParseToken::aE_, ParseToken::Terminal(Token::Xor)) 		=> Some(Vec::new()),
-		(ParseToken::aE_, ParseToken::Terminal(Token::Or)) 			=> Some(Vec::new()),
-		(ParseToken::aE_, ParseToken::End) 							=> Some(Vec::new()),
-		(ParseToken::aE_, ParseToken::Terminal(Token::And)) 		=> Some(Vec::from([ParseToken::Marker(3), ParseToken::aE, ParseToken::Terminal(Token::And)])),
-		// nE
-		(ParseToken::nE, ParseToken::Terminal(Token::LeftParen)) 	=> Some(Vec::from([ParseToken::X])),
-		(ParseToken::nE, ParseToken::Terminal(Token::Var(_))) 		=> Some(Vec::from([ParseToken::X])),
-		(ParseToken::nE, ParseToken::Terminal(Token::Not)) 			=> Some(Vec::from([ParseToken::Marker(2), ParseToken::nE, ParseToken::Terminal(Token::Not)])),
+		(ParseToken::E, ParseToken::Terminal(Token::LeftParen))    => Some(Vec::from([ParseToken::EE])),
+		(ParseToken::E, ParseToken::Terminal(Token::Not)) 		   => Some(Vec::from([ParseToken::EE])),
+		(ParseToken::E, ParseToken::Terminal(Token::Var(_))) 	   => Some(Vec::from([ParseToken::EE])),
+		// EE
+		(ParseToken::EE, ParseToken::Terminal(Token::LeftParen))   => Some(Vec::from([ParseToken::EE_, ParseToken::IE])),
+		(ParseToken::EE, ParseToken::Terminal(Token::Not)) 		   => Some(Vec::from([ParseToken::EE_, ParseToken::IE])),
+		(ParseToken::EE, ParseToken::Terminal(Token::Var(_))) 	   => Some(Vec::from([ParseToken::EE_, ParseToken::IE])),
+		// EE'
+		(ParseToken::EE_, ParseToken::Terminal(Token::RightParen)) => Some(Vec::new()),
+		(ParseToken::EE_, ParseToken::End) 						   => Some(Vec::new()),
+		(ParseToken::EE_, ParseToken::Terminal(Token::Equiv))	   => Some(Vec::from([ParseToken::Marker(3), ParseToken::EE, ParseToken::Terminal(Token::Equiv)])),
+		// IE
+		(ParseToken::IE, ParseToken::Terminal(Token::LeftParen))   => Some(Vec::from([ParseToken::IE_, ParseToken::XE])),
+		(ParseToken::IE, ParseToken::Terminal(Token::Not)) 		   => Some(Vec::from([ParseToken::IE_, ParseToken::XE])),
+		(ParseToken::IE, ParseToken::Terminal(Token::Var(_))) 	   => Some(Vec::from([ParseToken::IE_, ParseToken::XE])),
+		// IE'
+		(ParseToken::IE_, ParseToken::Terminal(Token::RightParen)) => Some(Vec::new()),
+		(ParseToken::IE_, ParseToken::Terminal(Token::Equiv)) 	   => Some(Vec::new()),
+		(ParseToken::IE_, ParseToken::End) 						   => Some(Vec::new()),
+		(ParseToken::IE_, ParseToken::Terminal(Token::Implies))    => Some(Vec::from([ParseToken::Marker(3), ParseToken::IE, ParseToken::Terminal(Token::Implies)])),
+		// XE
+		(ParseToken::XE, ParseToken::Terminal(Token::LeftParen))   => Some(Vec::from([ParseToken::XE_, ParseToken::OE])),
+		(ParseToken::XE, ParseToken::Terminal(Token::Not)) 		   => Some(Vec::from([ParseToken::XE_, ParseToken::OE])),
+		(ParseToken::XE, ParseToken::Terminal(Token::Var(_))) 	   => Some(Vec::from([ParseToken::XE_, ParseToken::OE])),
+		// XE'
+		(ParseToken::XE_, ParseToken::Terminal(Token::RightParen)) => Some(Vec::new()),
+		(ParseToken::XE_, ParseToken::Terminal(Token::Equiv)) 	   => Some(Vec::new()),
+		(ParseToken::XE_, ParseToken::Terminal(Token::Implies))    => Some(Vec::new()),
+		(ParseToken::XE_, ParseToken::End) 						   => Some(Vec::new()),
+		(ParseToken::XE_, ParseToken::Terminal(Token::Xor)) 	   => Some(Vec::from([ParseToken::Marker(3), ParseToken::XE, ParseToken::Terminal(Token::Xor)])),
+		// OE
+		(ParseToken::OE, ParseToken::Terminal(Token::LeftParen))   => Some(Vec::from([ParseToken::OE_, ParseToken::AE])),
+		(ParseToken::OE, ParseToken::Terminal(Token::Not)) 		   => Some(Vec::from([ParseToken::OE_, ParseToken::AE])),
+		(ParseToken::OE, ParseToken::Terminal(Token::Var(_))) 	   => Some(Vec::from([ParseToken::OE_, ParseToken::AE])),
+		// OE'
+		(ParseToken::OE_, ParseToken::Terminal(Token::RightParen)) => Some(Vec::new()),
+		(ParseToken::OE_, ParseToken::Terminal(Token::Equiv)) 	   => Some(Vec::new()),
+		(ParseToken::OE_, ParseToken::Terminal(Token::Implies))    => Some(Vec::new()),
+		(ParseToken::OE_, ParseToken::Terminal(Token::Xor)) 	   => Some(Vec::new()),
+		(ParseToken::OE_, ParseToken::End) 						   => Some(Vec::new()),
+		(ParseToken::OE_, ParseToken::Terminal(Token::Or)) 		   => Some(Vec::from([ParseToken::Marker(3), ParseToken::OE, ParseToken::Terminal(Token::Or)])),
+		// AE
+		(ParseToken::AE, ParseToken::Terminal(Token::LeftParen))   => Some(Vec::from([ParseToken::AE_, ParseToken::NE])),
+		(ParseToken::AE, ParseToken::Terminal(Token::Not)) 		   => Some(Vec::from([ParseToken::AE_, ParseToken::NE])),
+		(ParseToken::AE, ParseToken::Terminal(Token::Var(_))) 	   => Some(Vec::from([ParseToken::AE_, ParseToken::NE])),
+		// AE'
+		(ParseToken::AE_, ParseToken::Terminal(Token::RightParen)) => Some(Vec::new()),
+		(ParseToken::AE_, ParseToken::Terminal(Token::Equiv)) 	   => Some(Vec::new()),
+		(ParseToken::AE_, ParseToken::Terminal(Token::Implies))    => Some(Vec::new()),
+		(ParseToken::AE_, ParseToken::Terminal(Token::Xor)) 	   => Some(Vec::new()),
+		(ParseToken::AE_, ParseToken::Terminal(Token::Or)) 		   => Some(Vec::new()),
+		(ParseToken::AE_, ParseToken::End) 						   => Some(Vec::new()),
+		(ParseToken::AE_, ParseToken::Terminal(Token::And)) 	   => Some(Vec::from([ParseToken::Marker(3), ParseToken::AE, ParseToken::Terminal(Token::And)])),
+		// NE
+		(ParseToken::NE, ParseToken::Terminal(Token::LeftParen))   => Some(Vec::from([ParseToken::X])),
+		(ParseToken::NE, ParseToken::Terminal(Token::Var(_))) 	   => Some(Vec::from([ParseToken::X])),
+		(ParseToken::NE, ParseToken::Terminal(Token::Not)) 		   => Some(Vec::from([ParseToken::Marker(2), ParseToken::NE, ParseToken::Terminal(Token::Not)])),
 		// X
-		(ParseToken::X, ParseToken::Terminal(Token::LeftParen)) 	=> Some(Vec::from([ParseToken::Terminal(Token::RightParen), ParseToken::E, ParseToken::Terminal(Token::LeftParen)])),
-		(ParseToken::X, ParseToken::Terminal(Token::Var(x))) 		=> Some(Vec::from([ParseToken::Terminal(Token::Var(x.clone()))])),
+		(ParseToken::X, ParseToken::Terminal(Token::LeftParen))    => Some(Vec::from([ParseToken::Terminal(Token::RightParen), ParseToken::E, ParseToken::Terminal(Token::LeftParen)])),
+		(ParseToken::X, ParseToken::Terminal(Token::Var(x))) 	   => Some(Vec::from([ParseToken::Terminal(Token::Var(x.clone()))])),
 		// Else
-		_ => None,
+		_ => None, // PARSE ERROR: invalid entry in parse table
 	}
 }
 
 fn evolve_sem_stack(mut sem_stack: Vec<AST>, n: usize) -> Vec<AST>{
-	if sem_stack.len() >= n && n > 0 {
+	if sem_stack.len() >= n && n > 0 { 				// TODO -- do this more idiomatically
 		let mut xs: Vec<AST> = sem_stack.split_off(sem_stack.len() - n);
 		let mut op: AST = {
 			if n == 3 {
@@ -383,12 +396,13 @@ fn evolve_sem_stack(mut sem_stack: Vec<AST>, n: usize) -> Vec<AST>{
 
 fn push_sem_stack(terminal: Token, mut sem_stack: Vec<AST>) -> Vec<AST> {
 	match terminal {
-		Token::LeftParen | Token::RightParen  => return sem_stack,
-		_ 				  					  => { sem_stack.push(AST::new(terminal, None)); return sem_stack; },
+		Token::LeftParen | Token::RightParen => return sem_stack,
+		_ 				  					 => { sem_stack.push(AST::new(terminal, None)); return sem_stack; },
 	}
 }
 
-fn parse_LL1(mut stack: Vec<ParseToken>, mut input: Vec<ParseToken>, mut sem_stack: Vec<AST>) -> Option<Vec<AST>> {
+// TODO clean up the nested matches here too
+fn parse_ll1(mut stack: Vec<ParseToken>, mut input: Vec<ParseToken>, mut sem_stack: Vec<AST>) -> Option<Vec<AST>> {
 	match (stack.pop(), input.last()) {
 		(Some(v), Some(x)) 		=> {
 			match v {
@@ -399,27 +413,27 @@ fn parse_LL1(mut stack: Vec<ParseToken>, mut input: Vec<ParseToken>, mut sem_sta
 							if t == *tx {
 								// Consume input token and perform required action
 								input.pop();
-								return parse_LL1(stack, input, push_sem_stack(t, sem_stack));
+								parse_ll1(stack, input, push_sem_stack(t, sem_stack))
 							} else {
-								return None;
+								None // PARSE ERROR: terminals at front of stack and input do not match
 							}
 						},
-						_ => return None,
+						_ => None, // PARSE ERROR: top of input stack is nonterminal
 					}
 				},
 				ParseToken::End 		=> {
 					// End of stack
 					match x {
 						ParseToken::End => {
-							return Some(sem_stack);
+							Some(sem_stack)
 						},
-						_ 	=> return None,
+						_ 	=> return None, // PARSE ERROR: unexpected end of stack
 					}
 				},
 				ParseToken::Marker(n)	=> {
 					// Semantic marker; evolve semantic stack
 					sem_stack = evolve_sem_stack(sem_stack, n);
-					return parse_LL1(stack, input, sem_stack);
+					parse_ll1(stack, input, sem_stack)
 				},
 				_ 			=> {
 					// Production
@@ -428,23 +442,22 @@ fn parse_LL1(mut stack: Vec<ParseToken>, mut input: Vec<ParseToken>, mut sem_sta
 							for tok in production.into_iter() {
 								stack.push(tok);
 							}
-							return parse_LL1(stack, input, sem_stack);
+							parse_ll1(stack, input, sem_stack)
 						},
-						None 				=> return None,
+						None 				=> None,	// PARSE ERROR: invalid entry in parse table
 					}
 				},
 			}
 		},
-		(None, None) 			=> return None,
-		_ 						=> return None,
+		_ 						=> None, // PARSE ERROR (TODO: split errors between end up input and end of stack?)
 	}
 }
 
 pub fn read_input(input: String) -> Option<Formula> {
 	if let Some(lexed_token_stream) = lex(&input) {
-		if let Some(parsed_AST) = parse(lexed_token_stream) {
-			return parsed_AST.to_formula();
+		if let Some(parsed_ast) = parse(lexed_token_stream) {
+			return parsed_ast.to_formula();
 		}
 	}
-	return None;
+	None
 }

@@ -2,26 +2,8 @@ use structures::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 
-pub fn extract_variables(p: &Formula) -> HashSet<String> {
-	let mut vars: HashSet<String> = HashSet::new();
-	extract_variables_rec(p, &mut vars);
-	vars
-}
-
-fn extract_variables_rec<'a, 'b>(p: &Formula, vars: &mut HashSet<String>) {
-	match p {
-		Formula::Var(x) 		=> { vars.insert(x.name.clone()); },
-		Formula::Not(q) 		=> { extract_variables_rec(q, vars); },
-		Formula::And(q, r) 		=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
-		Formula::Or(q, r) 		=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
-		Formula::Implies(q, r) 	=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
-		Formula::Equiv(q, r) 	=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
-		Formula::Xor(q, r) 		=> { extract_variables_rec(q, vars); extract_variables_rec(r, vars); },
-	}
-}
-
 pub fn find_truth_table(p: &Formula) -> Vec<Model> {
-	let mut vars: Vec<String> = extract_variables(p).into_iter().collect();
+	let mut vars: Vec<String> = p.extract_variables().into_iter().collect();
 	vars.sort();
 	let n = vars.len();
 	let mut models: Vec<Model> = Vec::new();
@@ -41,7 +23,7 @@ pub fn find_truth_table(p: &Formula) -> Vec<Model> {
 }
 
 pub fn display_truth_table(p: &Formula) { // TODO -- add support for multiple formulae
-	let mut vars: Vec<String> = extract_variables(p).into_iter().collect();
+	let mut vars: Vec<String> = p.extract_variables().into_iter().collect();
 	vars.sort();
 	for var in vars.iter() {
 		print!("{} | ", var);
@@ -58,13 +40,25 @@ pub fn display_truth_table(p: &Formula) { // TODO -- add support for multiple fo
 	for model in models.iter() {
 		for var in vars.iter() {
 			match model.get(var) {
-				Some(t) => { if *t { print!("1{}| ", " ".repeat(var.len())) } else { print!("0{}| ", " ".repeat(var.len())) } },
-				None 	=> print!("<DISPLAY ERROR>\n"),
+				Some(t) => { 
+					if *t { 
+						print!("1{}| ", " ".repeat(var.len())) 
+					} else { 
+						print!("0{}| ", " ".repeat(var.len())) 
+					}
+				},
+				None 	=> eprintln!("DISPLAY ERROR"),
 			}
 		}
 		match p.interpret(model) {
-			Some(t) => { if t { print!("1\n") } else { print!("0\n") } },
-			None 	=> print!("<DISPLAY ERROR>\n"),
+			Some(t) => { 
+				if t { 
+					print!("1\n") 
+				} else { 
+					print!("0\n") 
+				} 
+			},
+			None 	=> eprintln!("DISPLAY ERROR\n"),
 		}
 	}
 }
@@ -78,7 +72,6 @@ pub fn find_model(p: &Formula) -> Option<Model> {
 	}
 	None
 }
-
 
 pub fn is_satisfiable(p: &Formula) -> bool {
 	match find_model(p) {
