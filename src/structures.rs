@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 
-#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, PartialOrd, Ord, Clone)] // TODO -- can we just replace this with String? refactoring required
 pub struct Variable {
 	pub name: String
 }

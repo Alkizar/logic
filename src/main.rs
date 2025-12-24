@@ -10,6 +10,7 @@ use parser::*;
 use truth_table::*;
 use proofs::*;
 use std::collections::HashMap;
+use std::io;
 
 // TODO
 // * Fitch proof system
@@ -150,16 +151,109 @@ fn main() {
         }
     }*/
 
-    let mut proof = Proof::new();
+    /*let mut proof = Proof::new();
     let rules = initialize_rules();
-    let premise_1 = String::from("x");
-    let premise_2 = String::from("x => y");
-    if let (Some(p1), Some(p2)) = (read_input(premise_1), read_input(premise_2)) {
+    let premise_1 = String::from("x => y");
+    let premise_2 = String::from("y => z");
+    let assumption_1 = String::from("x");
+    if let (Some(p1), Some(p2), Some(a1)) = (read_input(premise_1), read_input(premise_2), read_input(assumption_1)) {
         proof.add_premise(p1);
         proof.add_premise(p2);
+        proof.add_assumption(a1);
         if let Some(rule) = rules.get(&"ImpliesElim".to_string()) {
-            proof.infer(rule, Vec::from([0, 1]));
+            proof.infer(rule, Vec::from([0, 2]));
+            proof.infer(rule, Vec::from([1, 3]));
+            proof.implication_intro();
         }
     }
-    print!("{}", proof);
+    print!("{}", proof);*/
+
+    let mut proof = Proof::new();
+    let rules = initialize_rules();
+
+    loop {
+        println!("Select option:\n  P - premise\n  A - assumption\n  D - delete\n  R - rule\n  Q - quit");
+        let mut input_string = String::new();
+        io::stdin()
+            .read_line(&mut input_string) // read_line appends to the string
+            .expect("Failed to read line"); // basic error handling
+        match input_string.trim() {
+            "P" => {
+                println!("Enter premise:");
+                input_string = String::new();
+                io::stdin()
+                    .read_line(&mut input_string) // read_line appends to the string
+                    .expect("Failed to read line");
+                match read_input(input_string) {
+                    Some(p) => {
+                        proof.add_premise(p);
+                        println!("{}", proof);
+                    },
+                    None => println!("Invalid formula."),
+                }
+            },
+            "A" => {
+                println!("Enter assumption:");
+                input_string = String::new();
+                io::stdin()
+                    .read_line(&mut input_string) // read_line appends to the string
+                    .expect("Failed to read line");
+                match read_input(input_string) {
+                    Some(p) => {
+                        proof.add_assumption(p);
+                        println!("{}", proof);
+                    },
+                    None => println!("Invalid formula."),
+                }
+            },
+            "D" => {
+                proof.delete_bottom();
+                println!("{}", proof);
+            },
+            "R" => {
+                println!("Select rule:");
+                input_string = String::new();
+                io::stdin()
+                    .read_line(&mut input_string) // read_line appends to the string
+                    .expect("Failed to read line");
+
+                if input_string.trim() == "ImpliesIntro".to_string() {
+                    proof.implication_intro();
+                    println!("{}", proof);
+                } else {
+                    match rules.get(input_string.trim()) {
+                        Some(rule) => {
+                            println!("Enter the desired indices:");
+                            input_string = String::new();
+                            io::stdin()
+                                .read_line(&mut input_string) // read_line appends to the string
+                                .expect("Failed to read line");
+
+                            let mut premise_indices: Vec<usize> = Vec::new();
+                            for index in input_string.trim().split(',') {
+                                premise_indices.push(index.parse().expect("Not a valid usize."));
+                            }
+
+                            proof.infer(rule, premise_indices);
+                            println!("{}", proof);
+                        },
+                        None => println!("Invalid rule."),
+                    }
+                }
+            },
+            "Q" => {
+                println!("Quitting...");
+                return;
+            },
+            _ => println!("Invalid input."),
+        }
+    }
+
+    /*let mut input_string = String::new();
+    io::stdin()
+        .read_line(&mut input_string) // read_line appends to the string
+        .expect("Failed to read line"); // basic error handling
+    let trimmed_input = input_string.trim();
+
+    println!("You entered: {}", trimmed_input);*/
 }

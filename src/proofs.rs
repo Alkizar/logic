@@ -7,7 +7,7 @@ pub struct InferenceRule {
 	pub name:		 String,
 	pub premises: 	 Vec<Formula>,
 	pub conclusions: Vec<Formula>,
-	// TODO -- free: Vec<Formula> to indicate what formulas must be manually supplied (eg. or intro)
+	pub free:		 Option<Vec<String>>, // These are the names of the free variables that must be supplied with instantiations
 }
 
 // merges a pair of assignments if consistent; fails if inconsistent
@@ -204,6 +204,50 @@ pub fn apply_rule_with_supplied(formulae: Vec<&Formula>, rule: &InferenceRule, s
 		)
 }
 
+fn conclusions_from_premises2(instantiation: &HashMap<&Formula, &Formula>, rule: &InferenceRule, supplied: &Option<Assignment<'_>>) -> Option<Vec<Formula>> {
+	let mut assignment: Assignment<'_>;
+	match supplied {
+		Some(supplied_assignment) => assignment = supplied_assignment.clone(),
+		None 					  => assignment = HashMap::new(),
+	}
+	for premise in rule.premises.iter() {
+		match instantiation.get(premise) {
+			Some(p) => {
+				match unify(p, premise) {
+					Some(m) => assignment = merge_assignments(assignment, m)?, // TODO -- check that this is sound
+					None => return None,
+				}
+			},
+			None =>	return None,
+		}
+	}
+
+	// at this point should have an assignment to all premises in rule
+	// next, apply this assignment to each conclusion
+	let mut conclusions: Vec<Formula> = Vec::new();
+	for conclusion in rule.conclusions.iter() {
+		conclusions.push(conclusion.substitute_formula_from_assignment(&assignment));
+	}
+	Some(conclusions)
+}
+
+// TODO: where do we check that all the free variables in the rule are bound by supplied?
+pub fn apply_rule2(formulae: Vec<&Formula>, rule: &InferenceRule, supplied: Option<Assignment<'_>>) -> Vec<Formula> {
+	let mut instantiations = make_instantiations(&formulae, &rule.premises);
+	instantiations
+		.iter()
+		.fold(
+			Vec::new(), 
+			|mut acc_conclusions: Vec<Formula>, instantiation| match conclusions_from_premises2(instantiation, rule, &supplied) {
+				Some(conclusions) => { 
+					acc_conclusions.extend(conclusions); 
+					acc_conclusions 
+				},
+				None			  => acc_conclusions,
+			} 
+		)
+}
+
 /*impl InferenceRule {
 	fn apply_rule(&self, ps: Vec<Formula>) -> Option<Vec<Formula>> {
 		// try to match against formulas
@@ -222,7 +266,7 @@ fn initialize_and_intro(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("psi");
 	let conclusion = String::from("phi & psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_ai: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_ai: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]), free: None };
 		Some(rule_ai)
 	} else {
 		// ERROR
@@ -236,7 +280,7 @@ fn initialize_and_elim(name: String) -> Option<InferenceRule> {
 	let conclusion_1 = String::from("phi");
 	let conclusion_2 = String::from("psi");
 	if let (Some(p), Some(c1), Some(c2)) = (read_input(premise), read_input(conclusion_1), read_input(conclusion_2)) {
-		let rule_ae: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c1, c2]) };
+		let rule_ae: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c1, c2]), free: None };
 		Some(rule_ae)
 	} else {
 		// ERROR
@@ -249,7 +293,7 @@ fn initialize_or_intro(name: String) -> Option<InferenceRule> {
 	let premise = String::from("phi");
 	let conclusion = String::from("phi | psi");
 	if let (Some(p), Some(c)) = (read_input(premise), read_input(conclusion)) {
-		let rule_oi: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c]) };
+		let rule_oi: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c]), free: Some(Vec::from([String::from("psi")])) };
 		Some(rule_oi)
 	} else {
 		// ERROR
@@ -264,7 +308,7 @@ fn initialize_or_elim(name: String) -> Option<InferenceRule> {
 	let premise_3 = String::from("psi => theta");
 	let conclusion = String::from("theta");
 	if let (Some(p1), Some(p2), Some(p3), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(premise_3), read_input(conclusion)) {
-		let rule_oe: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2, p3]), conclusions: Vec::from([c]) };
+		let rule_oe: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2, p3]), conclusions: Vec::from([c]), free: None };
 		Some(rule_oe)
 	} else {
 		// ERROR
@@ -278,7 +322,7 @@ fn initialize_implies_elim(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("phi");
 	let conclusion = String::from("psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_ie: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_ie: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]), free: None };
 		Some(rule_ie)
 	} else {
 		// ERROR
@@ -292,7 +336,7 @@ fn initialize_xor_intro(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("~psi");
 	let conclusion = String::from("phi + psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_xi: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_xi: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]), free: None };
 		Some(rule_xi)
 	} else {
 		// ERROR
@@ -306,7 +350,7 @@ fn initialize_xor_elim(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("~phi");
 	let conclusion = String::from("psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_xe: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_xe: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]), free: None };
 		Some(rule_xe)
 	} else {
 		// ERROR
@@ -320,7 +364,7 @@ fn initialize_equiv_intro(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("psi => phi");
 	let conclusion = String::from("phi <=> psi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_bi: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_bi: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]), free: None };
 		Some(rule_bi)
 	} else {
 		// ERROR
@@ -334,7 +378,7 @@ fn initialize_equiv_elim(name: String) -> Option<InferenceRule> {
 	let conclusion_1 = String::from("phi => psi");
 	let conclusion_2 = String::from("psi => phi");
 	if let (Some(p), Some(c1), Some(c2)) = (read_input(premise), read_input(conclusion_1), read_input(conclusion_2)) {
-		let rule_be: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c1, c2]) };
+		let rule_be: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c1, c2]), free: None };
 		Some(rule_be)
 	} else {
 		// ERROR
@@ -348,7 +392,7 @@ fn initialize_not_intro(name: String) -> Option<InferenceRule> {
 	let premise_2 = String::from("phi => ~psi");
 	let conclusion = String::from("~phi");
 	if let (Some(p1), Some(p2), Some(c)) = (read_input(premise_1), read_input(premise_2), read_input(conclusion)) {
-		let rule_ni: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]) };
+		let rule_ni: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p1, p2]), conclusions: Vec::from([c]), free: None };
 		Some(rule_ni)
 	} else {
 		// ERROR
@@ -361,7 +405,7 @@ fn initialize_not_elim(name: String) -> Option<InferenceRule> {
 	let premise = String::from("~~phi");
 	let conclusion = String::from("phi");
 	if let (Some(p), Some(c)) = (read_input(premise), read_input(conclusion)) {
-		let rule_ne: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c]) };
+		let rule_ne: InferenceRule = InferenceRule{ name: name, premises: Vec::from([p]), conclusions: Vec::from([c]), free: None };
 		Some(rule_ne)
 	} else {
 		// ERROR
