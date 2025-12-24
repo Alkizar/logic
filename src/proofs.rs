@@ -577,10 +577,10 @@ impl Proof {
 		self.steps.push(ProofStep{ formula: assumption, rule: Derivation::Assumption, depth: self.bottom_depth, index: self.bottom_index });
 	}
 
-	pub fn implication_intro(&mut self) {
+	pub fn implication_intro(&mut self) { // handle case of only one assumption? eg assume x, derive x=>x
 		if self.bottom_depth > 0 {
 			self.bottom_depth -= 1;
-			if let (Some(assumption), Some(proof_step)) = (self.assumption_stack.pop(), self.steps.pop()) {
+			if let (Some(assumption), Some(proof_step)) = (self.assumption_stack.pop(), self.steps.last()) { // HERE: don't pop from steps, just get bottom
 				let implication: Formula = Formula::Implies(Box::new(assumption), Box::new(proof_step.formula.clone()));
 				self.bottom_index += 1;
 				self.steps.push(ProofStep{ formula: implication, rule: Derivation::ImplicationIntro, depth: self.bottom_depth, index: self.bottom_index });
@@ -593,7 +593,7 @@ impl Proof {
 	pub fn infer(&mut self, rule: &InferenceRule, premise_indices: Vec<usize>) {
 		let mut premises: Vec<&Formula> = Vec::new();
 		for index in premise_indices.iter() {
-			if let Some(p) = self.steps.get(*index) {
+			if let Some(p) = self.steps.get(*index - 1) { // TODO -- adjust indices to start at 1
 				premises.push(&p.formula);
 			}
 		}

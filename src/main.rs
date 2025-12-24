@@ -4,11 +4,13 @@ mod structures;
 mod parser;
 mod truth_table;
 mod proofs;
+mod resolution;
 
 use structures::*;
 use parser::*;
 use truth_table::*;
 use proofs::*;
+use resolution::*;
 use std::collections::HashMap;
 use std::io;
 
@@ -168,7 +170,7 @@ fn main() {
     }
     print!("{}", proof);*/
 
-    let mut proof = Proof::new();
+    /*let mut proof = Proof::new();
     let rules = initialize_rules();
 
     loop {
@@ -247,6 +249,19 @@ fn main() {
             },
             _ => println!("Invalid input."),
         }
+    }*/
+
+
+    println!("Input formula:");
+    let mut input_string = String::new();
+    io::stdin()
+        .read_line(&mut input_string) // read_line appends to the string
+        .expect("Failed to read line"); // basic error handling
+    match read_input(input_string) {
+        Some(p) => {
+            println!("{}", negation_clausal(&xor_impl_clausal(&p)));
+        },
+        None => println!("Invalid formula."),
     }
 
     /*let mut input_string = String::new();
