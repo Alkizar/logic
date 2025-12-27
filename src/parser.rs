@@ -1,5 +1,7 @@
+//mod parser;
+
 use std::fmt;
-use structures::*;
+use crate::structures::*;
 
 #[derive(PartialEq, Eq)]
 enum Token {

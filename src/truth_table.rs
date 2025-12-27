@@ -1,4 +1,6 @@
-use structures::*;
+//mod truth_table;
+
+use crate::structures::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 

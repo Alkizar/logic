@@ -5,12 +5,14 @@ mod parser;
 mod truth_table;
 mod proofs;
 mod resolution;
+mod frontend;
 
-use structures::*;
-use parser::*;
-use truth_table::*;
-use proofs::*;
-use resolution::*;
+use crate::structures::*;
+use crate::parser::*;
+use crate::truth_table::*;
+use crate::proofs::*;
+use crate::resolution::*;
+use crate::frontend::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io;
@@ -24,7 +26,7 @@ use std::io;
 // * documentation
 // * change "Option" to "Result" for error handling
 
-fn main() {
+fn main() -> Result<(), io::Error> {
     /*let x : Variable = Variable{name: "xxx".to_string()};
     let y : Variable = Variable{name: "yy".to_string()};
     let mut v : Model = HashMap::new();
@@ -323,12 +325,14 @@ fn main() {
         }
     }*/
 
-    let input = String::from("(x | y) & (~x) & (y => z) & ~z & (~w | w)");
+    /*let input = String::from("p & (~r | q) & r & (~p | ~q | ~r)");
+        //String::from("(p | q) & (p | ~q) & (~p | q) & (~p | ~q)");
+        //String::from("(x | y) & (~x) & (y => z) & ~z & (~w | w)");
     if let Some(p) = read_input(input) {
         let clauses = into_clausal(&p);
         let target = HashSet::new();
         let mut n = 0;
-        for clause in resolve_with(&clauses, &target, tautology_eliminator).iter() {
+        for clause in resolve_with(&clauses, &target, subsumption_eliminator).iter() {
             n += 1;
             print!("{} {{", n);
             for literal in clause {
@@ -340,7 +344,18 @@ fn main() {
             }
             print!("}}\n")
         }
-    }
+    }*/
+
+    /*let input1 = String::from("p & (p=>q) & ((p => q) => (q => r))");
+    let input2 = String::from("r");
+    if let (Some(p), Some(q)) = (read_input(input1), read_input(input2)) {
+        println!("{} entails {}? {}", p, q, entails(&p, &q));
+    }*/
+
+    /*let stdout = io::stdout();
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+    Ok(())*/
 
     /*let mut input_string = String::new();
     io::stdin()
@@ -349,4 +364,6 @@ fn main() {
     let trimmed_input = input_string.trim();
 
     println!("You entered: {}", trimmed_input);*/
+
+    make_ui()
 }

@@ -1,4 +1,6 @@
-use structures::*;
+//mod resolution;
+
+use crate::structures::*;
 use std::fmt;
 use std::collections::HashSet;
 
@@ -165,12 +167,6 @@ pub fn resolve(r: &Clause, s: &Clause) -> Vec<Clause> {
 	resolved_clauses
 }
 
-// Returns true if r subsumes (eg. is a subset of) s
-fn subsumes(r: &Clause, s: &Clause) -> bool {
-	r.is_subset(s)
-}
-
-
 // ICE: check if clause already in proof before adding it
 // TE: check if clause is tautology before adding it
 
@@ -259,11 +255,6 @@ pub fn resolve_with<F>(clauses: &Vec<Clause>, target: &Clause, eliminator: F) ->
 }
 
 pub fn identical_clause_eliminator(new_clause: &Clause, clauses: &Vec<Clause>) -> bool {
-	/*println!("====");
-	for literal in new_clause.iter() {
-		println!(">> {}, {}", literal.name, literal.sign);
-	}
-	println!("verdict: {}", clauses.contains(new_clause));*/
 	!clauses.contains(new_clause)
 }
 
@@ -276,4 +267,36 @@ pub fn tautology_eliminator(new_clause: &Clause, clauses: &Vec<Clause>) -> bool 
 		}
 	}
 	true
+}
+
+pub fn te_ice(new_clause: &Clause, clauses: &Vec<Clause>) -> bool {
+	identical_clause_eliminator(new_clause, clauses) && tautology_eliminator(new_clause, clauses)
+}
+
+// Returns true if r subsumes (eg. is a subset of) s
+fn subsumes(r: &Clause, s: &Clause) -> bool {
+	r.is_subset(s)
+}
+
+pub fn subsumption_eliminator(new_clause: &Clause, clauses: &Vec<Clause>) -> bool {
+	for clause in clauses.iter() {
+		if subsumes(clause, new_clause) {
+			return false;
+		}
+	}
+	return true;
+}
+
+pub fn te_ice_sub(new_clause: &Clause, clauses: &Vec<Clause>) -> bool {
+	identical_clause_eliminator(new_clause, clauses) && tautology_eliminator(new_clause, clauses) && subsumption_eliminator(new_clause, clauses)
+}
+
+// TODO -- there is a much cleaner way to do this; change the signature of resolve_with so that the return
+// indicates whether we found the target
+pub fn entails(p: &Formula, q: &Formula) -> bool {
+	let mut clauses = into_clausal(&p);
+	let goal_clauses = into_clausal(&q.invert());
+	clauses.extend(goal_clauses);
+	let target = HashSet::new();
+	resolve_with(&clauses, &target, te_ice_sub).contains(&target)
 }

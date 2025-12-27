@@ -1,5 +1,7 @@
-use structures::*;
-use parser::*;
+//mod proofs;
+
+use crate::structures::*;
+use crate::parser::*;
 use std::fmt;
 use std::collections::HashMap;
 

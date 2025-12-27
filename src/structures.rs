@@ -1,3 +1,5 @@
+//mod structures;
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -158,6 +160,13 @@ impl Formula {
 			p = p.substitute_formula(key, val);
 		}
 		p
+	}
+
+	pub fn invert(&self) -> Formula {
+		match self {
+			Formula::Not(x) => *x.clone(),
+			_ 							=> Formula::Not(Box::new(self.clone())),
+		}
 	}
 }
 
