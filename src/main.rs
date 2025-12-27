@@ -12,6 +12,7 @@ use truth_table::*;
 use proofs::*;
 use resolution::*;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io;
 
 // TODO
@@ -252,16 +253,93 @@ fn main() {
     }*/
 
 
-    println!("Input formula:");
+    /*println!("Input formula:");
     let mut input_string = String::new();
     io::stdin()
         .read_line(&mut input_string) // read_line appends to the string
         .expect("Failed to read line"); // basic error handling
     match read_input(input_string) {
         Some(p) => {
-            println!("{}", negation_clausal(&xor_impl_clausal(&p)));
+            for clause in into_clausal(&p).iter() {
+                print!("{{");
+                for literal in clause {
+                    if literal.sign {
+                        print!("{}, ", literal.name);
+                    } else {
+                        print!("~{}, ", literal.name);
+                    }
+                }
+                print!("}}\n")
+            }
         },
         None => println!("Invalid formula."),
+    }*/
+
+    /*let input_1 = String::from("x");
+    let input_2 = String::from("~x");
+    if let (Some(p), Some(q)) = (read_input(input_1), read_input(input_2)) {
+        let clauses_p = into_clausal(&p);
+        let clauses_q = into_clausal(&q);
+        for clause in clauses_p.iter() {
+            print!("{{");
+            for literal in clause {
+                if literal.sign {
+                    print!("{}, ", literal.name);
+                } else {
+                    print!("~{}, ", literal.name);
+                }
+            }
+            print!("}}\n")
+        }
+
+        for clause in clauses_q.iter() {
+            print!("{{");
+            for literal in clause {
+                if literal.sign {
+                    print!("{}, ", literal.name);
+                } else {
+                    print!("~{}, ", literal.name);
+                }
+            }
+            print!("}}\n")
+        }
+
+        println!("=====");
+
+        for clause_p in clauses_p.iter() {
+            for clause_q in clauses_q.iter() {
+                for clause in resolve(&clause_p, &clause_q).iter() {
+                    print!("{{");
+                    for literal in clause {
+                        if literal.sign {
+                            print!("{}, ", literal.name);
+                        } else {
+                            print!("~{}, ", literal.name);
+                        }
+                    }
+                    print!("}}\n")
+                }
+            }
+        }
+    }*/
+
+    let input = String::from("(x | y) & (~x) & (y => z) & ~z & (~w | w)");
+    if let Some(p) = read_input(input) {
+        let clauses = into_clausal(&p);
+        let target = HashSet::new();
+        let mut n = 0;
+        for clause in resolve_with(&clauses, &target, tautology_eliminator).iter() {
+            n += 1;
+            print!("{} {{", n);
+            for literal in clause {
+                if literal.sign {
+                    print!("{}, ", literal.name);
+                } else {
+                    print!("~{}, ", literal.name);
+                }
+            }
+            print!("}}\n")
+        }
     }
 
     /*let mut input_string = String::new();
