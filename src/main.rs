@@ -26,7 +26,7 @@ use std::io;
 // * documentation
 // * change "Option" to "Result" for error handling
 
-fn main() -> Result<(), io::Error> {
+fn main() {
     /*let x : Variable = Variable{name: "xxx".to_string()};
     let y : Variable = Variable{name: "yy".to_string()};
     let mut v : Model = HashMap::new();
@@ -365,5 +365,5 @@ fn main() -> Result<(), io::Error> {
 
     println!("You entered: {}", trimmed_input);*/
 
-    make_ui()
+    initialize_engine()
 }

@@ -621,4 +621,15 @@ impl Proof {
 		}
 		// ERROR
 	}
+
+	pub fn len(&self) -> usize {
+		self.steps.len()
+	}
+
+	pub fn get_formula_at(&self, index: usize) -> Option<Formula> {
+		if let Some(step) = self.steps.get(index) {
+			return Some(step.formula.clone());
+		}
+		None
+	}
 }
