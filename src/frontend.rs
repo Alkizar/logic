@@ -1,12 +1,12 @@
-use std::io;
-use std::io::{stdin, stdout, Write};
 use std::collections::HashMap;
+use std::io;
+use std::io::{Write, stdin, stdout};
 
-use crate::structures::*;
 use crate::parser::*;
-use crate::truth_table::*;
 use crate::proofs::*;
 use crate::resolution::*;
+use crate::structures::*;
+use crate::truth_table::*;
 
 struct EngineData {
     proof: Proof,
@@ -41,10 +41,11 @@ fn get_input_formula() -> Formula {
     loop {
         let mut input_string = String::new();
         stdin()
-        .read_line(&mut input_string) // read_line appends to the string
-        .expect("Failed to read line"); // basic error handling
-        if let Some(p) = read_input(input_string) {
-            return p;
+            .read_line(&mut input_string) // read_line appends to the string
+            .expect("Failed to read line"); // basic error handling
+        match read_input(input_string) {
+            Some(p) => { return p; },
+            None    => { println!("Invalid formula."); },
         }
     }
 }
@@ -58,9 +59,7 @@ fn get_selected(data: &EngineData) -> Option<Formula> {
 }
 
 fn await_formula(data: &EngineData) -> Formula {
-    println!("  (a) enter a formula
-  (b) use the most recent formula
-  (c) use the selected formula");
+    println!("  (a) enter a formula\n  (b) use the most recent formula\n  (c) use the selected formula");
     loop {
         let mut option = await_option();
         match option.as_str() {
@@ -101,10 +100,8 @@ fn await_indices() -> Vec<usize> {
         .read_line(&mut input_string) // read_line appends to the string
         .expect("Failed to read line");
     for index in input_string.trim().split(',') {
-        if let Ok(n) = index.trim().parse::<usize>() {
-            if n > 0 {
-                indices.push(n.saturating_sub(1));
-            }
+        if let Ok(n) = index.trim().parse::<usize>() && n > 0 {
+            indices.push(n.saturating_sub(1));
         }
     }
     indices
@@ -263,7 +260,7 @@ fn fitch_apply_rule(mut data: EngineData) -> EngineData {
     data
 }
 
-fn get_rule_abbrev(name: &String) -> String {
+fn get_rule_abbrev(name: &str) -> String {
     let mut abbr = String::new();
     for c in name.chars() {
         if c.is_uppercase() {
@@ -344,7 +341,7 @@ fn entails_menu(mut data: EngineData) -> EngineData {
         clear();
         println!("      ENTAILMENT CHECKER     
 -----------------------------");
-        if data.premises.len() == 0 {
+        if data.premises.is_empty() {
             println!("premises: {{}}");
         } else {
             println!("premises:");
@@ -354,7 +351,7 @@ fn entails_menu(mut data: EngineData) -> EngineData {
         }
         if let Some(ref p) = data.conclusion {
             println!("conclusion:\n  {}", p);
-            println!("entailed? {}", all_entail(&data.premises, &p))
+            println!("entailed? {}", all_entail(&data.premises, p))
         }
         if let Some(ref p) = data.selected_formula {
             println!("-----------------------------\nselected: {}", p);

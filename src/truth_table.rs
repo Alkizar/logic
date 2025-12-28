@@ -1,5 +1,3 @@
-//mod truth_table;
-
 use crate::structures::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
@@ -30,13 +28,13 @@ pub fn display_truth_table(p: &Formula) { // TODO -- add support for multiple fo
 	for var in vars.iter() {
 		print!("{} | ", var);
 	}
-	print!("{}\n", p);
+	println!("{}", p);
 
 	for var in vars.iter() {
 		print!("-{}+-", "-".repeat(var.len()));
 	}
 
-	print!("{}\n", "-".repeat(p.to_string().len()));
+	println!("{}", "-".repeat(p.to_string().len()));
 
 	let models: Vec<Model> = find_truth_table(p);
 	for model in models.iter() {
@@ -55,9 +53,9 @@ pub fn display_truth_table(p: &Formula) { // TODO -- add support for multiple fo
 		match p.interpret(model) {
 			Some(t) => { 
 				if t { 
-					print!("1\n") 
+					println!("1") 
 				} else { 
-					print!("0\n") 
+					println!("0") 
 				} 
 			},
 			None 	=> eprintln!("DISPLAY ERROR\n"),
@@ -76,10 +74,7 @@ pub fn find_model(p: &Formula) -> Option<Model> {
 }
 
 pub fn is_satisfiable(p: &Formula) -> bool {
-	match find_model(p) {
-		Some(_) => true,
-		None	=> false,
-	}
+	find_model(p).is_some()
 }
 
 pub fn print_model(v: &Model) {

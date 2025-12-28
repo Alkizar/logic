@@ -1,5 +1,3 @@
-//mod resolution;
-
 use crate::structures::*;
 use std::fmt;
 use std::collections::HashSet;
@@ -261,7 +259,7 @@ pub fn identical_clause_eliminator(new_clause: &Clause, clauses: &Vec<Clause>) -
 pub fn tautology_eliminator(new_clause: &Clause, clauses: &Vec<Clause>) -> bool {
 	for literal in new_clause.iter() {
 		for other in new_clause.iter() {
-			if other.name == literal.name && other.sign == !literal.sign {
+			if other.name == literal.name && other.sign != literal.sign {
 				return false;
 			}
 		}
@@ -284,7 +282,7 @@ pub fn subsumption_eliminator(new_clause: &Clause, clauses: &Vec<Clause>) -> boo
 			return false;
 		}
 	}
-	return true;
+	true
 }
 
 pub fn te_ice_sub(new_clause: &Clause, clauses: &Vec<Clause>) -> bool {
@@ -294,7 +292,7 @@ pub fn te_ice_sub(new_clause: &Clause, clauses: &Vec<Clause>) -> bool {
 // TODO -- there is a much cleaner way to do this; change the signature of resolve_with so that the return
 // indicates whether we found the target
 pub fn entails(p: &Formula, q: &Formula) -> bool {
-	let mut clauses = into_clausal(&p);
+	let mut clauses = into_clausal(p);
 	let goal_clauses = into_clausal(&q.invert());
 	clauses.extend(goal_clauses);
 	let target = HashSet::new();
@@ -304,7 +302,7 @@ pub fn entails(p: &Formula, q: &Formula) -> bool {
 pub fn all_entail(ps: &Vec<Formula>, q: &Formula) -> bool {
 	let mut clauses = into_clausal(&q.invert());
 	for p in ps.iter() {
-		clauses.extend(into_clausal(&p));
+		clauses.extend(into_clausal(p));
 	}
 	let target = HashSet::new();
 	resolve_with(&clauses, &target, te_ice_sub).contains(&target)

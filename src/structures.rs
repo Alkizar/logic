@@ -1,5 +1,3 @@
-//mod structures;
-
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -16,10 +14,7 @@ impl fmt::Display for Variable {
 }
 
 fn not(a: Option<bool>) -> Option<bool> {
-	match a {
-		Some(t) => Some(!t),
-		_ => None,
-	}
+	a.map(|t| !t)
 }
 
 fn and(a: Option<bool>, b: Option<bool>) -> Option<bool> {
@@ -46,13 +41,6 @@ fn equiv(a: Option<bool>, b: Option<bool>) -> Option<bool> {
 
 fn xor(a: Option<bool>, b: Option<bool>) -> Option<bool> {
 	and(or(a, b), not(and(a, b)))
-}
-
-fn extract_bool(t: Option<&bool>) -> Option<bool> {
-	match t {
-		Some(x) => Some(*x),
-		None => None,
-	}
 }
 
 #[derive(PartialEq, Eq, Clone, Hash)]
@@ -86,7 +74,7 @@ pub type Assignment<'a> = HashMap<String, &'a Formula>;
 impl Formula {
 	pub fn interpret(&self, v: &Model) -> Option<bool> {
 		match self { 
-			Formula::Var(x) 	   => extract_bool(v.get(&x.name)),
+			Formula::Var(x) 	   => v.get(&x.name).copied(),//extract_bool(v.get(&x.name)),
 			Formula::Not(y) 	   => not(y.interpret(v)),
 			Formula::And(y, z) 	   => and(y.interpret(v), z.interpret(v)),
 			Formula::Or(y, z) 	   => or(y.interpret(v), z.interpret(v)),
@@ -134,7 +122,7 @@ impl Formula {
 
 	pub fn extract_variables(&self) -> HashSet<String> {
 		let mut vars: HashSet<String> = HashSet::new();
-		extract_variables_rec(&self, &mut vars);
+		extract_variables_rec(self, &mut vars);
 		vars
 	}
 
@@ -167,6 +155,10 @@ impl Formula {
 			Formula::Not(x) => *x.clone(),
 			_ 							=> Formula::Not(Box::new(self.clone())),
 		}
+	}
+
+	pub fn display_len(&self) -> usize {
+		self.to_string().len()
 	}
 }
 

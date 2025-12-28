@@ -1,9 +1,8 @@
-//mod proofs;
-
 use crate::structures::*;
 use crate::parser::*;
 use std::fmt;
 use std::collections::HashMap;
+use std::cmp::max;
 
 pub struct InferenceRule {
 	pub name:		 String,
@@ -16,10 +15,8 @@ pub struct InferenceRule {
 pub fn merge_assignments<'a>(assignment1: Assignment<'a>, assignment2: Assignment<'a>) -> Option<Assignment<'a>> {
 	let mut new_assignment: Assignment<'a> = HashMap::new();
 	for (key, val) in assignment1.iter() {
-		if let Some(p) = assignment2.get(key) {
-			if val != p {
-				return None;
-			} 
+		if let Some(p) = assignment2.get(key) && val != p {
+			return None;
 		}
 		new_assignment.insert(key.to_string(), val);
 	}
@@ -498,6 +495,12 @@ impl fmt::Display for InferenceRule {
 				max_len = string.len();
 			}
 		}
+		for conclusion in self.conclusions.iter() {
+			let string_len = conclusion.to_string().len();
+			if string_len > max_len {
+				max_len = string_len;
+			}
+		}
 		display_str.push_str(&format!("{}    [{}]\n", "-".repeat(max_len), self.name));
 		for conclusion in self.conclusions.iter() {
 			let string = conclusion.to_string();
@@ -509,7 +512,7 @@ impl fmt::Display for InferenceRule {
 }
 
 enum Derivation {
-	Rule(String), // contains the name of the rule used; TODO -- add the indices of the proof used as well
+	Rule(String, Vec<usize>), // contains the name of the rule used; TODO -- add the indices of the proof used as well
 	Assumption,
 	Premise,
 	ImplicationIntro,
@@ -518,10 +521,18 @@ enum Derivation {
 impl fmt::Display for Derivation {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
-			Derivation::Rule(name) 		 => write!(f, "[{}]", name),
-			Derivation::Assumption 		 => write!(f, "[A]"),
-			Derivation::Premise 		 => write!(f, "[P]"),
-			Derivation::ImplicationIntro => write!(f, "[ImpliesIntro]"),
+			Derivation::Rule(name, indices) => {
+				//write!(f, "[{}]", name),
+				let mut display_str = String::from(format!("[{}", name));
+				for index in indices.iter() {
+					display_str.push_str(&format!(" {}", index + 1)); // increment index for display purposes
+				}
+				display_str.push_str("]");
+				write!(f, "{}", display_str)
+			},
+			Derivation::Assumption 		 	=> write!(f, "[A]"),
+			Derivation::Premise 		 	=> write!(f, "[P]"),
+			Derivation::ImplicationIntro 	=> write!(f, "[ImpliesIntro]"),
 		}
 	}
 }
@@ -545,18 +556,29 @@ impl fmt::Display for ProofStep {
 	}
 }
 
+fn display_proof_step(step: &ProofStep, width: usize) -> String {
+	let mut display_str = String::new();
+	display_str.push_str(&format!("{}. ", step.index));
+	for _ in 0..step.depth {
+		display_str.push_str("| ");
+	}
+	display_str.push_str(&format!("{}{}{}\n", step.formula, " ".repeat(4 + width.saturating_sub(step.formula.display_len() + step.depth * 2)), step.rule));
+	display_str
+}
+
 pub struct Proof {
 	steps: Vec<ProofStep>,
 	bottom_depth: usize,
 	bottom_index: usize,
 	assumption_stack: Vec<Formula>,
+	max_width: usize, // the length of the longest formatted formula in the proof
 }
 
 impl fmt::Display for Proof {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let mut display_str = String::new();
 		for proof_step in self.steps.iter() {
-			display_str.push_str(&format!("{}", proof_step));
+			display_str.push_str(display_proof_step(proof_step, self.max_width).as_str())
 		}
 		write!(f, "{}", display_str)
 	}
@@ -564,11 +586,12 @@ impl fmt::Display for Proof {
 
 impl Proof {
 	pub fn new() -> Self {
-		Proof{ steps: Vec::new(), bottom_depth: 0, bottom_index: 0, assumption_stack: Vec::new() }
+		Proof{ steps: Vec::new(), bottom_depth: 0, bottom_index: 0, assumption_stack: Vec::new(), max_width: 0 }
 	}
 
 	pub fn add_premise(&mut self, premise: Formula) {
 		self.bottom_index += 1;
+		self.max_width = max(self.max_width, self.bottom_depth * 2 + premise.display_len());
 		self.steps.push(ProofStep{ formula: premise, rule: Derivation::Premise, depth: self.bottom_depth, index: self.bottom_index });
 	}
 
@@ -576,6 +599,7 @@ impl Proof {
 		self.bottom_depth += 1;
 		self.bottom_index += 1;
 		self.assumption_stack.push(assumption.clone());
+		self.max_width = max(self.max_width, self.bottom_depth * 2 + assumption.display_len());
 		self.steps.push(ProofStep{ formula: assumption, rule: Derivation::Assumption, depth: self.bottom_depth, index: self.bottom_index });
 	}
 
@@ -585,6 +609,7 @@ impl Proof {
 			if let (Some(assumption), Some(proof_step)) = (self.assumption_stack.pop(), self.steps.last()) { // HERE: don't pop from steps, just get bottom
 				let implication: Formula = Formula::Implies(Box::new(assumption), Box::new(proof_step.formula.clone()));
 				self.bottom_index += 1;
+				self.max_width = max(self.max_width, self.bottom_depth * 2 + implication.display_len());
 				self.steps.push(ProofStep{ formula: implication, rule: Derivation::ImplicationIntro, depth: self.bottom_depth, index: self.bottom_index });
 			}
 			// Error
@@ -602,22 +627,20 @@ impl Proof {
 		let mut conclusions: Vec<Formula> = apply_rule(premises, rule);
 		while let Some(conclusion) = conclusions.pop() {
 			self.bottom_index += 1;
-			self.steps.push(ProofStep{ formula: conclusion, rule: Derivation::Rule(rule.name.clone()), depth: self.bottom_depth, index: self.bottom_index });
+			self.max_width = max(self.max_width, self.bottom_depth * 2 + conclusion.display_len());
+			self.steps.push(ProofStep{ formula: conclusion, rule: Derivation::Rule(rule.name.clone(), premise_indices.clone()), depth: self.bottom_depth, index: self.bottom_index });
 		}
 	}
 
 	//pub fn infer_with_free() // TODO
 
 	pub fn delete_bottom(&mut self) {
-		if self.bottom_index > 0 {
-			if let Some(proof_step) = self.steps.pop() {
-				self.bottom_index -= 1;
-				if let Derivation::Assumption = proof_step.rule {
-					self.assumption_stack.pop();
-					self.bottom_depth -= 1;
-				}
+		if self.bottom_index > 0 && let Some(proof_step) = self.steps.pop() {
+			self.bottom_index -= 1;
+			if let Derivation::Assumption = proof_step.rule {
+				self.assumption_stack.pop();
+				self.bottom_depth -= 1;
 			}
-			// ERROR
 		}
 		// ERROR
 	}
