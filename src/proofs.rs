@@ -509,7 +509,7 @@ impl fmt::Display for InferenceRule {
 }
 
 enum Derivation {
-	Rule(String), // contains the name of the rule used
+	Rule(String), // contains the name of the rule used; TODO -- add the indices of the proof used as well
 	Assumption,
 	Premise,
 	ImplicationIntro,
@@ -595,7 +595,7 @@ impl Proof {
 	pub fn infer(&mut self, rule: &InferenceRule, premise_indices: Vec<usize>) {
 		let mut premises: Vec<&Formula> = Vec::new();
 		for index in premise_indices.iter() {
-			if let Some(p) = self.steps.get(*index - 1) { // TODO -- adjust indices to start at 1
+			if let Some(p) = self.steps.get(*index) { // TODO -- adjust indices to start at 1
 				premises.push(&p.formula);
 			}
 		}

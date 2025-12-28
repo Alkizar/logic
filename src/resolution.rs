@@ -300,3 +300,12 @@ pub fn entails(p: &Formula, q: &Formula) -> bool {
 	let target = HashSet::new();
 	resolve_with(&clauses, &target, te_ice_sub).contains(&target)
 }
+
+pub fn all_entail(ps: &Vec<Formula>, q: &Formula) -> bool {
+	let mut clauses = into_clausal(&q.invert());
+	for p in ps.iter() {
+		clauses.extend(into_clausal(&p));
+	}
+	let target = HashSet::new();
+	resolve_with(&clauses, &target, te_ice_sub).contains(&target)
+}
